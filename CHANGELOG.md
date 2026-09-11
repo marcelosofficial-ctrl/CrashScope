@@ -9,7 +9,6 @@ CrashScope follows semantic versioning for public releases. Early `0.x` releases
 ### Planned
 
 - Additional NVIDIA and newer Intel GPU/CPU real-hardware validation.
-- Installer validation: prove the exact installed 1.0.0 -> 1.1.0 upgrade and user-state preservation path before publication.
 - Richer incident/session comparison views.
 - Evaluation of GapTrace as a future optional external evidence provider.
 - Optional code signing.
@@ -45,6 +44,10 @@ CrashScope follows semantic versioning for public releases. Early `0.x` releases
 - Real runtime validation observed a semantic configuration change, one ConfigTrace Context evidence item, and correct sidecar start/stop behavior.
 - ConfigTrace remains optional and disabled by default.
 - Correlation wording remains explicitly non-causal.
+- True installed **1.0.0 -> 1.1.0** upgrade/state-preservation validation passed, including schema v2 -> v3 migration, persisted-incident survival, startup preservation, uninstall cleanup, and exact restoration of the original user state.
+- Final ConfigTrace-OFF reference measurement: **0.2365%** average Agent CPU, **91.71 MB** average / **94.58 MB** peak working set, 0 stale frames, and 0 stream-delivery misses.
+- Final ConfigTrace-ON active-workload measurement: CrashScope **0.1966%** average CPU / **97.31 MB** peak working set; ConfigTrace **0%** measured average CPU / **4.99 MB** peak working set; 0 stale frames, 0 delivery misses, and no plaintext test secret in the provider journal.
+- Genuine non-elevated second-PC validation passed on Windows 10 / Intel Core i5-3210M / Intel HD Graphics 4000, followed by a manual visual PASS.
 
 ## [1.0.0] - 2026-09-11
 

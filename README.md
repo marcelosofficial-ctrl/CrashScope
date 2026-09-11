@@ -332,18 +332,17 @@ This distinction is deliberate and central to the project.
 
 ## Roadmap
 
+CrashScope 1.1 local release validation is complete. The exact release runtime is frozen at the fully validated `e51943f6b7aecaf98223ef30cbec10ef94c1eba1` boundary.
+
 Near-term milestones:
 
-- complete true installed 1.0.0 -> 1.1.0 upgrade/state-preservation validation
-- complete the final 1.1 performance, UTF-8, privacy/security, and cleanliness seal
-- repeat genuine second-PC validation for the exact frozen 1.1 artifact
+- complete the coordinated v1.0.0 / v1.1.0 GitHub and portfolio publication sweep
 - validate NVIDIA and newer Intel GPU/CPU paths on additional real machines
 - add richer incident/session comparison views
 - evaluate GapTrace as a future optional process-isolated evidence provider after 1.1
 - optional code signing
 
 AI-generated root-cause speculation is intentionally **not** an MVP dependency; structured local evidence comes first.
-
 ## Contributing
 
 Contributions should preserve CrashScope's evidence-first, local-first, least-privilege, and low-overhead design. See [CONTRIBUTING.md](CONTRIBUTING.md).

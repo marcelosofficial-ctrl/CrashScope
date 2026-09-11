@@ -108,14 +108,48 @@ GapTrace/network evidence is intentionally not part of CrashScope 1.1. The gener
 
 Code signing is also not implemented in 1.1.0; unsigned-build SmartScreen reputation warnings may occur.
 
-## Remaining local release gates before publication
+## Final local release validation
 
-Before the coordinated publication sweep, CrashScope 1.1 still requires the final release-candidate gates:
+CrashScope 1.1 local release validation is complete.
 
-- true installed **1.0.0 -> 1.1.0** upgrade/state-preservation validation;
-- final 1.1 performance and cleanliness seal;
-- repeat cross-machine/second-PC validation for the exact 1.1 artifact;
-- final UTF-8, security/privacy, and loopback verification;
-- exact artifact/hash handoff to the coordinated release process.
+Validated release boundary:
 
-No push, tag, GitHub Release, repository-visibility change, or GitHub Actions run is implied by this document.
+- exact v1.1.0 release/tag target: `e51943f6b7aecaf98223ef30cbec10ef94c1eba1`
+- exact portable SHA-256: `4ac728d03d634218add25d94e69a1a55ddd3283b6afc786dc155e1e7e15360a9`
+- exact installer SHA-256: `eb0acdab0f1da5ae5fbaeceadbd3691ee188f0d42204ddffc9527aa38f28062f`
+- automated .NET tests: **239/239 PASS**
+
+Installed upgrade validation passed for the exact **1.0.0 -> 1.1.0** path:
+
+- settings schema v2 -> v3 migrated correctly;
+- existing Auto Assist and retention settings were preserved;
+- ConfigTrace was introduced disabled with a null root by default;
+- a persisted 1.0 diagnostic-marker incident survived the upgrade;
+- startup state survived the upgrade;
+- 1.1 uninstall removed the application and owned startup value while preserving user data;
+- the original pre-validation user state was restored exactly.
+
+Final main-PC performance/cleanliness measurements:
+
+- ConfigTrace OFF: CrashScope **0.2365%** average CPU, **91.71 MB** average working set, **94.58 MB** peak working set, **34.76 MB** average private memory;
+- ConfigTrace ON with an active controlled workload: CrashScope **0.1966%** average CPU, **95.36 MB** average working set, **97.31 MB** peak working set, **34.06 MB** average private memory;
+- ConfigTrace sidecar: **0%** measured average CPU, **4.96 MB** average working set, **4.99 MB** peak working set, **0.91 MB** average private memory;
+- stale WebSocket frames: **0**;
+- stream delivery misses: **0**;
+- ConfigTrace journal created successfully;
+- plaintext test secret in the journal: **not found**;
+- sidecar start/stop lifecycle: **PASS**.
+
+Genuine second-PC validation also passed:
+
+- Windows 10;
+- Intel Core i5-3210M;
+- Intel HD Graphics 4000;
+- non-elevated validation;
+- exact portable SHA matched;
+- automated validator exited 0;
+- final manual dashboard inspection: **PASS**.
+
+The branch may contain a later documentation-only commit recording these completed gates. That later documentation commit is intentionally **not** the v1.1.0 binary release boundary. The release/tag target remains the exact runtime commit above so source provenance matches the binaries that were actually validated.
+
+Publication remains intentionally deferred to the coordinated release sweep. No push, tag, GitHub Release, repository-visibility change, or GitHub Actions run is implied by this document.
