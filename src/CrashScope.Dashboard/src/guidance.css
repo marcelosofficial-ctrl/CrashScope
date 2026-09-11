@@ -1,0 +1,106 @@
+.guidance-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 18px 0 12px;
+}
+
+.guidance-card {
+  min-height: 150px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface-2);
+}
+
+.guidance-card > span,
+.next-checks__heading > span {
+  display: block;
+  margin-bottom: 9px;
+  color: var(--muted-2);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.guidance-card h3,
+.next-checks h3 {
+  margin: 0 0 8px;
+  color: #e8edf5;
+  font-size: 13px;
+  letter-spacing: -0.02em;
+}
+
+.guidance-card p,
+.guidance-context p,
+.next-checks li {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.guidance-card--observed { border-top-color: rgba(97,231,181,.5); }
+.guidance-card--meaning { border-top-color: rgba(132,167,255,.55); }
+.guidance-card--caution { border-top-color: rgba(255,203,107,.52); }
+
+.guidance-context {
+  margin: 12px 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(132,167,255,.18);
+  border-radius: 10px;
+  background: rgba(132,167,255,.035);
+}
+
+.guidance-context strong {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 10px;
+  color: #cdd8e8;
+}
+
+.guidance-context p + p { margin-top: 7px; }
+
+.next-checks {
+  margin: 12px 0 18px;
+  padding: 17px 18px;
+  border: 1px solid rgba(97,231,181,.2);
+  border-radius: 11px;
+  background: linear-gradient(120deg, rgba(97,231,181,.045), transparent 55%), var(--surface-2);
+}
+
+.next-checks__heading { margin-bottom: 10px; }
+
+.next-checks ol {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 23px;
+}
+
+.next-checks li { padding-left: 4px; }
+.next-checks li::marker { color: var(--accent); font-weight: 800; }
+
+.incident-evidence-details {
+  margin-top: 14px;
+  border-top: 1px solid var(--border-soft);
+  padding-top: 12px;
+}
+
+.incident-evidence-details summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  user-select: none;
+}
+
+.incident-evidence-details[open] summary {
+  margin-bottom: 12px;
+  color: #d7dfeb;
+}
+
+@media (max-width: 900px) {
+  .guidance-grid { grid-template-columns: 1fr; }
+  .guidance-card { min-height: 0; }
+}

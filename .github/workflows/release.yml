@@ -1,0 +1,204 @@
+name: Release Windows
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: "Publish a GitHub release from the selected v* tag"
+        required: false
+        default: false
+        type: boolean
+  push:
+    branches:
+      - "release-candidate/**"
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24.x"
+          cache: npm
+          cache-dependency-path: src/CrashScope.Dashboard/package-lock.json
+
+      - name: Resolve application version
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'src/CrashScope.Agent/CrashScope.Agent.csproj') -Raw
+          $node = $project.SelectSingleNode('//Version')
+          if ($null -eq $node -or [string]::IsNullOrWhiteSpace($node.InnerText)) {
+            throw 'CrashScope.Agent.csproj does not define a Version.'
+          }
+          "CRASHSCOPE_VERSION=$($node.InnerText.Trim())" | Add-Content -Path $env:GITHUB_ENV
+          Write-Host "CrashScope version: $($node.InnerText.Trim())"
+
+      - name: Validate tag/version identity
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $tagVersion = $env:GITHUB_REF_NAME.Substring(1)
+          if ($tagVersion -ne $env:CRASHSCOPE_VERSION) {
+            throw "Tag $env:GITHUB_REF_NAME does not match CrashScope application version $env:CRASHSCOPE_VERSION."
+          }
+          Write-Host "Tag/version identity OK: $env:GITHUB_REF_NAME"
+
+      - name: Validate all PowerShell script syntax
+        shell: pwsh
+        run: |
+          $scripts = @(Get-ChildItem -Path (Join-Path $env:GITHUB_WORKSPACE 'scripts') -Filter '*.ps1' -File)
+          if ($scripts.Count -eq 0) { throw "No validation scripts were found." }
+          foreach ($script in $scripts) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              $script.FullName,
+              [ref]$tokens,
+              [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              Write-Host "PowerShell syntax errors in $($script.Name):"
+              $errors | ForEach-Object { Write-Host " - $($_.Message)" }
+              throw "PowerShell validation script contains syntax errors."
+            }
+          }
+
+      - name: Install dashboard dependencies
+        working-directory: src/CrashScope.Dashboard
+        run: npm ci --no-audit --no-fund
+
+      - name: Build dashboard
+        working-directory: src/CrashScope.Dashboard
+        run: npm run build
+
+      - name: Restore
+        run: dotnet restore CrashScope.sln
+
+      - name: Build
+        run: dotnet build CrashScope.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test CrashScope.sln -c Release --no-build
+
+      - name: Publish self-contained Windows build
+        run: dotnet publish src/CrashScope.Agent/CrashScope.Agent.csproj -p:PublishProfile=PortableWinX64 -o artifacts/CrashScope-win-x64
+
+      - name: Add release provenance and notices
+        shell: pwsh
+        run: |
+          $publish = Join-Path $env:GITHUB_WORKSPACE 'artifacts/CrashScope-win-x64'
+          Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'LICENSE') (Join-Path $publish 'LICENSE.txt')
+          Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'THIRD-PARTY-NOTICES.md') (Join-Path $publish 'THIRD-PARTY-NOTICES.md')
+          @(
+            'CrashScope portable build'
+            "Version: $env:CRASHSCOPE_VERSION"
+            "Source commit: $env:GITHUB_SHA"
+            "Source ref: $env:GITHUB_REF"
+            "Workflow run: $env:GITHUB_RUN_ID"
+            "Built UTC: $([DateTime]::UtcNow.ToString('o'))"
+            'Target: win-x64 self-contained'
+          ) | Set-Content -Path (Join-Path $publish 'BUILD-INFO.txt') -Encoding ascii
+
+      - name: Smoke test published application
+        shell: pwsh
+        run: |
+          & (Join-Path $env:GITHUB_WORKSPACE 'scripts/Test-PortableBuild.ps1') `
+            -PublishDirectory (Join-Path $env:GITHUB_WORKSPACE 'artifacts/CrashScope-win-x64') `
+            -ExpectedVersion $env:CRASHSCOPE_VERSION `
+            -RequireBuildInfo
+
+      - name: Package portable ZIP and checksum
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF_TYPE -eq "tag") {
+            $label = $env:GITHUB_REF_NAME
+          }
+          else {
+            $shortSha = $env:GITHUB_SHA.Substring(0, 7)
+            $label = "candidate-$shortSha"
+          }
+
+          $publish = Join-Path $env:GITHUB_WORKSPACE 'artifacts/CrashScope-win-x64'
+          $baseName = "CrashScope-$label-win-x64"
+          $zip = Join-Path $env:GITHUB_WORKSPACE "artifacts/$baseName.zip"
+          $checksum = "$zip.sha256.txt"
+
+          Compress-Archive -Path (Join-Path $publish '*') -DestinationPath $zip -CompressionLevel Optimal
+          $hash = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $(Split-Path $zip -Leaf)" | Set-Content -Path $checksum -Encoding ascii
+
+          "PACKAGE_BASENAME=$baseName" | Add-Content -Path $env:GITHUB_ENV
+          Write-Host "Created $(Split-Path $zip -Leaf)"
+          Write-Host "SHA256: $hash"
+
+      - name: Upload tested package artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ env.PACKAGE_BASENAME }}
+          path: |
+            artifacts/${{ env.PACKAGE_BASENAME }}.zip
+            artifacts/${{ env.PACKAGE_BASENAME }}.zip.sha256.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Create GitHub release
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_release == true && startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $versionFromTag = $tag.Substring(1)
+
+          if ($versionFromTag -ne $env:CRASHSCOPE_VERSION) {
+            throw "Tag $tag does not match CrashScope application version $env:CRASHSCOPE_VERSION."
+          }
+
+          $zip = "artifacts/CrashScope-$tag-win-x64.zip"
+          $checksum = "$zip.sha256.txt"
+          $notes = "docs/release-notes-$tag.md"
+
+          $releaseArgs = @(
+            'release'
+            'create'
+            $tag
+            $zip
+            $checksum
+            '--title'
+            "CrashScope $tag"
+          )
+
+          if (Test-Path -LiteralPath $notes) {
+            $releaseArgs += @('--notes-file', $notes)
+          }
+          else {
+            $releaseArgs += '--generate-notes'
+          }
+
+          if ($versionFromTag -match '-') {
+            $releaseArgs += '--prerelease'
+          }
+
+          & gh @releaseArgs
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "GitHub release publication failed."
+          }

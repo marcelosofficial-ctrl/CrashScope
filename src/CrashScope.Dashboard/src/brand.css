@@ -1,0 +1,16 @@
+.brand-mark {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent url('/crashscope-logo.png') center / contain no-repeat;
+  color: transparent;
+  font-size: 0;
+  letter-spacing: 0;
+  box-shadow: 0 0 18px rgba(184, 255, 0, 0.08);
+}
+
+.brand-mark::selection {
+  background: transparent;
+}

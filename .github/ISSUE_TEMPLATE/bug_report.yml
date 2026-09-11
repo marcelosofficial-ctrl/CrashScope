@@ -1,0 +1,95 @@
+name: Bug report
+description: Report a reproducible CrashScope problem
+title: "[Bug]: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping validate CrashScope. Do not attach personal crash dumps, WER archives, tokens, or sensitive machine diagnostics to a public issue.
+
+  - type: input
+    id: version
+    attributes:
+      label: CrashScope version
+      description: Release version or commit SHA.
+      placeholder: v0.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 24H2
+    validations:
+      required: true
+
+  - type: input
+    id: cpu
+    attributes:
+      label: CPU
+      placeholder: AMD Ryzen 5 7500F
+    validations:
+      required: true
+
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU and driver
+      placeholder: AMD Radeon RX 9070 XT, driver ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: privilege
+    attributes:
+      label: How was CrashScope run?
+      options:
+        - Normal user
+        - Administrator
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Include exact behavior and any safe error text.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start CrashScope
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: telemetry
+    attributes:
+      label: Telemetry / diagnostic context
+      description: List unavailable metrics, incident classification, or sanitized status output if relevant. Do not upload sensitive dumps.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Safety checks
+      options:
+        - label: I removed private paths, tokens, personal crash dumps, and other sensitive diagnostic data.
+          required: true
+        - label: I checked that this is not simply an expected unavailable sensor documented in the hardware matrix.
+          required: false

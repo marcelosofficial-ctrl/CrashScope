@@ -1,0 +1,93 @@
+name: Hardware validation
+description: Report CrashScope behavior on a CPU/GPU platform for the support matrix
+title: "[Hardware]: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for real-machine compatibility/telemetry validation. Architecture support alone is not enough for a hardware row to become Validated.
+
+  - type: input
+    id: version
+    attributes:
+      label: CrashScope version
+      placeholder: v0.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 24H2
+    validations:
+      required: true
+
+  - type: input
+    id: cpu
+    attributes:
+      label: CPU
+    validations:
+      required: true
+
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU
+    validations:
+      required: true
+
+  - type: input
+    id: driver
+    attributes:
+      label: GPU driver version
+    validations:
+      required: true
+
+  - type: dropdown
+    id: privilege
+    attributes:
+      label: Execution privilege
+      options:
+        - Normal user
+        - Administrator
+    validations:
+      required: true
+
+  - type: textarea
+    id: available
+    attributes:
+      label: Metrics that worked
+      description: List CPU load, GPU load, temperatures, hotspot, clocks, power, VRAM, fan, memory, etc.
+    validations:
+      required: true
+
+  - type: textarea
+    id: unavailable
+    attributes:
+      label: Metrics unavailable or suspicious
+      description: CrashScope should report unsupported readings as unavailable, not fake zeroes.
+
+  - type: checkboxes
+    id: flows
+    attributes:
+      label: Flows tested
+      options:
+        - label: Dashboard live telemetry
+        - label: Workload discovery
+        - label: Workload attach / active sampling
+        - label: Session stop / process exit
+        - label: Safe diagnostic marker
+        - label: Persistence after restart
+
+  - type: textarea
+    id: performance
+    attributes:
+      label: Optional performance measurement
+      description: Agent average CPU / working set and how it was measured.
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Other notes

@@ -1,0 +1,166 @@
+/* Large desktop tuning. Kept separate from the base stylesheet so 1080p/1440p behavior stays stable. */
+@media (min-width: 1800px) {
+  .app-shell {
+    grid-template-columns: 260px minmax(0, 1fr);
+  }
+
+  .sidebar {
+    padding: 30px 22px;
+  }
+
+  .brand-mark {
+    width: 44px;
+    height: 44px;
+  }
+
+  .brand strong {
+    font-size: 17px;
+  }
+
+  .brand span,
+  .nav-link {
+    font-size: 12px;
+  }
+
+  .main-content {
+    width: min(2100px, 100%);
+    padding: 38px 46px 32px;
+  }
+
+  .topbar {
+    margin-bottom: 28px;
+  }
+
+  h1 {
+    font-size: clamp(34px, 2.2vw, 46px);
+  }
+
+  h2 {
+    font-size: 19px;
+  }
+
+  .eyebrow {
+    font-size: 10px;
+  }
+
+  .topbar-copy,
+  .panel-heading p:not(.eyebrow) {
+    font-size: 13px;
+  }
+
+  .metrics-grid {
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .metric-card {
+    min-height: 170px;
+    padding: 17px 18px 12px;
+    border-radius: 12px;
+  }
+
+  .metric-card__topline {
+    font-size: 11px;
+  }
+
+  .metric-card__value {
+    margin-top: 17px;
+    font-size: clamp(36px, 2vw, 48px);
+  }
+
+  .metric-card__value span {
+    font-size: 15px;
+  }
+
+  .metric-card p {
+    font-size: 10px;
+  }
+
+  .sparkline,
+  .sparkline-placeholder {
+    height: 38px;
+  }
+
+  .content-grid,
+  .content-grid--hero {
+    gap: 14px;
+    margin-top: 14px;
+  }
+
+  .panel {
+    padding: 21px;
+    border-radius: 13px;
+    margin-top: 14px;
+  }
+
+  .panel-heading {
+    margin-bottom: 18px;
+  }
+
+  .button,
+  .status-pill {
+    min-height: 40px;
+    font-size: 12px;
+  }
+
+  .health-list div {
+    padding: 12px 0;
+  }
+
+  .health-list dt,
+  .health-list dd,
+  .active-session-meta,
+  .environment-strip {
+    font-size: 10px;
+  }
+
+  .session-stats strong {
+    font-size: 17px;
+  }
+
+  .session-stats span,
+  .badge,
+  .workload-meta,
+  th,
+  td span,
+  .incident-row span,
+  .footer {
+    font-size: 9px;
+  }
+
+  table,
+  .incident-row p {
+    font-size: 10px;
+  }
+
+  td strong,
+  .incident-title-row strong,
+  .workload-main > strong {
+    font-size: 11px;
+  }
+}
+
+@media (min-width: 2800px) {
+  .app-shell {
+    grid-template-columns: 300px minmax(0, 1fr);
+  }
+
+  .main-content {
+    width: min(2600px, calc(100vw - 300px));
+    padding: 52px 64px 40px;
+  }
+
+  .metrics-grid,
+  .content-grid,
+  .content-grid--hero {
+    gap: 18px;
+  }
+
+  .metric-card {
+    min-height: 188px;
+  }
+
+  .panel {
+    padding: 24px;
+  }
+}

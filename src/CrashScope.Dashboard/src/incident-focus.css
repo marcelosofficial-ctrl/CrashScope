@@ -1,0 +1,24 @@
+.incident-detail--revealed {
+  scroll-margin-top: 24px;
+  outline: none;
+  animation: incident-detail-reveal 900ms ease-out;
+}
+
+.incident-detail--revealed:focus-visible {
+  box-shadow: 0 0 0 2px rgba(98, 214, 255, 0.32), var(--panel-shadow, none);
+}
+
+@keyframes incident-detail-reveal {
+  0% {
+    box-shadow: 0 0 0 1px rgba(98, 214, 255, 0.55), 0 0 28px rgba(98, 214, 255, 0.18);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .incident-detail--revealed {
+    animation: none;
+  }
+}

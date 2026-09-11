@@ -1,0 +1,166 @@
+name: CI
+
+# TEMPORARY QUOTA-SAFETY MODE
+# While the engineering repository is private, standard GitHub-hosted runner
+# time consumes the account's monthly Actions allowance. Run this workflow
+# manually only when a CI result is materially needed. Restore normal push/PR
+# triggers after the repository/publication strategy no longer makes private
+# runner minutes scarce.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24.x"
+          cache: npm
+          cache-dependency-path: src/CrashScope.Dashboard/package-lock.json
+
+      - name: Resolve application version
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'src/CrashScope.Agent/CrashScope.Agent.csproj') -Raw
+          $node = $project.SelectSingleNode('//Version')
+          if ($null -eq $node -or [string]::IsNullOrWhiteSpace($node.InnerText)) {
+            throw 'CrashScope.Agent.csproj does not define a Version.'
+          }
+          "CRASHSCOPE_VERSION=$($node.InnerText.Trim())" | Add-Content -Path $env:GITHUB_ENV
+          Write-Host "CrashScope version: $($node.InnerText.Trim())"
+
+      - name: Verify repository hygiene
+        shell: pwsh
+        run: |
+          $tracked = @(git ls-files)
+          $forbidden = @($tracked | Where-Object {
+            $_ -match '(^|/)(bin|obj|node_modules)(/|$)' -or
+            $_ -match '\.(dmp|etl|db|sqlite|sqlite3)$' -or
+            $_ -match '^src/CrashScope\.Agent/wwwroot/assets/'
+          })
+          if ($forbidden.Count -gt 0) {
+            Write-Host "Forbidden generated/sensitive artifacts are tracked:"
+            $forbidden | ForEach-Object { Write-Host " - $_" }
+            throw "Repository hygiene check failed."
+          }
+
+      - name: Validate all PowerShell script syntax
+        shell: pwsh
+        run: |
+          $scripts = @(Get-ChildItem -Path (Join-Path $env:GITHUB_WORKSPACE 'scripts') -Filter '*.ps1' -File)
+          if ($scripts.Count -eq 0) { throw "No validation scripts were found." }
+          foreach ($script in $scripts) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              $script.FullName,
+              [ref]$tokens,
+              [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              Write-Host "PowerShell syntax errors in $($script.Name):"
+              $errors | ForEach-Object { Write-Host " - $($_.Message)" }
+              throw "PowerShell validation script contains syntax errors."
+            }
+          }
+
+      - name: Prove validation state safety with synthetic data
+        shell: pwsh
+        run: |
+          & (Join-Path $env:GITHUB_WORKSPACE 'scripts/Test-ValidationStateSafety.ps1')
+
+      - name: Guard Windows PowerShell wrapper layout
+        shell: pwsh
+        run: |
+          & (Join-Path $env:GITHUB_WORKSPACE 'scripts/Test-WindowsPowerShellWrapperLayout.ps1')
+
+      - name: Guard second-PC validator state safety
+        shell: pwsh
+        run: |
+          & (Join-Path $env:GITHUB_WORKSPACE 'scripts/Test-SecondPcValidatorSafety.ps1')
+
+      - name: Guard release workflow contract
+        shell: pwsh
+        run: |
+          & (Join-Path $env:GITHUB_WORKSPACE 'scripts/Test-ReleaseWorkflowContract.ps1')
+
+      - name: Install dashboard dependencies
+        working-directory: src/CrashScope.Dashboard
+        run: npm ci --no-audit --no-fund
+
+      - name: Build dashboard
+        working-directory: src/CrashScope.Dashboard
+        run: npm run build
+
+      - name: Restore
+        run: dotnet restore CrashScope.sln
+
+      - name: Build
+        run: dotnet build CrashScope.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test CrashScope.sln -c Release --no-build
+
+      - name: Publish portable Windows build
+        run: dotnet publish src/CrashScope.Agent/CrashScope.Agent.csproj -p:PublishProfile=PortableWinX64 -o artifacts/CrashScope-win-x64
+
+      - name: Add build provenance and notices
+        shell: pwsh
+        run: |
+          $publish = Join-Path $env:GITHUB_WORKSPACE 'artifacts/CrashScope-win-x64'
+          Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'LICENSE') (Join-Path $publish 'LICENSE.txt')
+          Copy-Item (Join-Path $env:GITHUB_WORKSPACE 'THIRD-PARTY-NOTICES.md') (Join-Path $publish 'THIRD-PARTY-NOTICES.md')
+          @(
+            'CrashScope CI portable build'
+            "Version: $env:CRASHSCOPE_VERSION"
+            "Source commit: $env:GITHUB_SHA"
+            "Source ref: $env:GITHUB_REF"
+            "Workflow run: $env:GITHUB_RUN_ID"
+            "Built UTC: $([DateTime]::UtcNow.ToString('o'))"
+            'Target: win-x64 self-contained'
+          ) | Set-Content -Path (Join-Path $publish 'BUILD-INFO.txt') -Encoding ascii
+
+      - name: Smoke test portable Windows build
+        shell: pwsh
+        run: |
+          & (Join-Path $env:GITHUB_WORKSPACE 'scripts/Test-PortableBuild.ps1') `
+            -PublishDirectory (Join-Path $env:GITHUB_WORKSPACE 'artifacts/CrashScope-win-x64') `
+            -ExpectedVersion $env:CRASHSCOPE_VERSION `
+            -RequireBuildInfo
+
+      - name: Package tested CI build
+        shell: pwsh
+        run: |
+          $publish = Join-Path $env:GITHUB_WORKSPACE 'artifacts/CrashScope-win-x64'
+          $zip = Join-Path $env:GITHUB_WORKSPACE 'artifacts/CrashScope-ci-win-x64.zip'
+          Compress-Archive -Path (Join-Path $publish '*') -DestinationPath $zip -CompressionLevel Optimal
+          $hash = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  CrashScope-ci-win-x64.zip" | Set-Content -Path "$zip.sha256.txt" -Encoding ascii
+          Write-Host "CI package SHA256: $hash"
+
+      - name: Upload exact tested Windows build
+        uses: actions/upload-artifact@v6
+        with:
+          name: CrashScope-ci-win-x64
+          path: |
+            artifacts/CrashScope-ci-win-x64.zip
+            artifacts/CrashScope-ci-win-x64.zip.sha256.txt
+          if-no-files-found: error
+          retention-days: 14

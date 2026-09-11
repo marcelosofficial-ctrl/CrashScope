@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrashScope.Core\CrashScope.Core.csproj" />
+    <ProjectReference Include="..\CrashScope.Infrastructure\CrashScope.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>CrashScope</AssemblyName>
+    <Product>CrashScope</Product>
+    <Title>CrashScope</Title>
+    <Company>CrashScope</Company>
+    <Description>Local-first Windows crash diagnostics and system telemetry.</Description>
+    <Version>1.0.0</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <ApplicationIcon>Assets\CrashScope.ico</ApplicationIcon>
+  </PropertyGroup>
+
+</Project>
