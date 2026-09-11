@@ -6,23 +6,63 @@ CrashScope follows semantic versioning for public releases. Early `0.x` releases
 
 ## [Unreleased]
 
+### Planned
+
+- Additional NVIDIA and newer Intel GPU/CPU real-hardware validation.
+- Installer validation: prove the exact installed 1.0.0 -> 1.1.0 upgrade and user-state preservation path before publication.
+- Richer incident/session comparison views.
+- Evaluation of GapTrace as a future optional external evidence provider.
+- Optional code signing.
+
+## [1.1.0] - 2026-09-12
+
 ### Added
 
-- Version-aware local release-candidate builder with clean-tree, provenance, portable smoke, ZIP, and SHA-256 gates.
-- Per-user Windows installer built with Inno Setup 7 for x64-compatible Windows systems.
-- Version-aware local installer builder with product-source and installer-source provenance plus SHA-256 output.
-- Installer regression contract covering least privilege, install location, optional shortcuts, user-data preservation, startup non-interference, and absence of Windows-service installation.
-- Automated installer lifecycle validation covering fresh installation, exact payload verification, same-version repair, Start Menu behavior, per-user HKCU registration, user-data preservation, and clean uninstall.
-- State-safe installed-candidate validation covering installed-runtime health, loopback-only binding, browser security, second-instance protection, workload attach/stop, safe incident capture, restart persistence, uninstall, and independently verified restoration of pre-validation CrashScope state.
+- Generic process-isolated external evidence-provider architecture.
+- ConfigTrace 1.0.1 as the first bundled external evidence provider.
+- Settings schema v3 fields for an opt-in ConfigTrace root and enabled state.
+- Dashboard controls for saving one absolute ConfigTrace root and enabling/disabling the provider.
+- Workload-scoped ConfigTrace sidecar lifecycle with the provider OFF by default.
+- Bounded provider evidence correlation into incidents as Context evidence.
+- Provider Context evidence in user-requested safe diagnostic markers.
+- Portable and installer packaging for `providers\ConfigTrace\configtrace.exe` and its MIT license.
+- ConfigTrace source/version/hash provenance in packaged `BUILD-INFO.txt`.
 
 ### Changed
 
-- Release engineering can now produce and validate both portable and installed Windows candidates locally without consuming private GitHub Actions minutes.
-- Stable-release preparation now treats installer and portable distribution as parallel supported Windows delivery formats.
-- Release documentation distinguishes completed installer engineering from remaining code-signing, broader hardware-validation, exact-candidate validation, and publication work.
-- Local stable-release source metadata is deliberately stamped `1.0.0`; this does not create a Git tag or publish a release.
-- Installer uninstall cleanup removes only the exact app-owned `Run\CrashScope` startup command and preserves different or unrelated startup entries.
+- Manual diagnostic markers now use the same provider-evidence mapping rules as live incidents.
+- Release packages pin ConfigTrace 1.0.1 commit `b629c970dfc14fca5df1e0ef2b0d1d07d0d8c56c` and EXE SHA-256 `fe1c470a58402e82e97ee529c6a6b02822430da70e65ffc5fc5a71359ad4e521`.
+- Automated .NET test count increased to **239**.
 
+### Security
+
+- ConfigTrace 1.0.1 fixes sensitive-key recognition for camelCase/PascalCase names such as `apiToken`, `accessToken`, `clientSecret`, and `sessionId`.
+- End-to-end validation confirms plaintext test secrets are absent from both ConfigTrace journals and CrashScope marker JSON.
+
+### Validation
+
+- 239/239 .NET tests passed.
+- Real runtime validation observed a semantic configuration change, one ConfigTrace Context evidence item, and correct sidecar start/stop behavior.
+- ConfigTrace remains optional and disabled by default.
+- Correlation wording remains explicitly non-causal.
+
+## [1.0.0] - 2026-09-11
+
+### Added
+
+- Stable self-contained Windows x64 portable package and per-user Inno Setup installer.
+- Installer lifecycle and installed-runtime validation with durable user-state preservation.
+- Final dashboard/sidebar UX polish and UTF-8 rendering repair.
+- Genuine second-PC validation on Windows 10 / Intel Core i5-3210M / Intel HD Graphics 4000.
+
+### Validation
+
+- Frozen source commit: `10c5769364068619f026e609a3c221d2665ede57`.
+- 185/185 .NET tests passed.
+- Final reference-system Agent CPU: **0.2327%** average.
+- Final working set: **91.36 MB average / 94.41 MB peak**.
+- Portable SHA-256: `3a0a61969830e824b5c8d3d828b730a0e878b81679df6b8625897840c39560bb`.
+- Installer SHA-256: `8574e45f1ce649cfd78748bc42044ef5e9b79a7fa738fc862bb657d51dd52abc`.
 ## [0.1.0] - 2026-09-10
 
 ### Added

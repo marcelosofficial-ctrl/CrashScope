@@ -3,6 +3,7 @@ using CrashScope.Agent.Buffering;
 using CrashScope.Agent.Incidents;
 using CrashScope.Agent.Sampling;
 using CrashScope.Core.Diagnostics;
+using CrashScope.Core.Evidence;
 using CrashScope.Core.Incidents;
 using CrashScope.Core.Telemetry;
 
@@ -86,6 +87,81 @@ public sealed class LiveIncidentMonitorTests
     }
 
     [Fact]
+    public async Task ScanOnceAsync_RequestsBoundedProviderWindowAndCorrelatesContext()
+    {
+        var now = Utc(2026, 9, 11, 14, 0, 0);
+        var artifact = CreateArtifact("LiveKernelEvent", now, "report-provider");
+        var sink = new InMemoryIncidentReportSink();
+        DateTimeOffset? requestedStart = null;
+        DateTimeOffset? requestedEnd = null;
+        var readCount = 0;
+
+        ValueTask<IReadOnlyList<EvidenceEvent>> ProviderEvidence(
+            DateTimeOffset startUtc,
+            DateTimeOffset endUtc,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            readCount++;
+            requestedStart = startUtc;
+            requestedEnd = endUtc;
+
+            return ValueTask.FromResult<IReadOnlyList<EvidenceEvent>>(
+                new[]
+                {
+                    new EvidenceEvent(
+                        now.AddSeconds(-10),
+                        now.AddSeconds(-9.8),
+                        "ConfigTrace",
+                        "ConfigChange",
+                        EvidenceSeverity.Information,
+                        "Renderer changed.")
+                });
+        }
+
+        var monitor = CreateMonitor(
+            now,
+            sink,
+            artifacts: new[] { artifact },
+            providerEvidenceSource: ProviderEvidence);
+
+        var triggered = await monitor.ScanOnceAsync();
+
+        Assert.Equal(1, triggered);
+        Assert.Equal(1, readCount);
+        Assert.Equal(now.AddMinutes(-2), requestedStart);
+        Assert.Equal(now.AddMinutes(2), requestedEnd);
+
+        var report = Assert.Single(sink.Snapshot());
+        var context = Assert.Single(
+            report.Evidence,
+            item => item.Source == "ConfigTrace");
+
+        Assert.Equal(IncidentEvidenceRole.Context, context.Role);
+        Assert.Contains("before this incident", context.Summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ScanOnceAsync_ProviderReadFailureDoesNotBlockIncidentReport()
+    {
+        var now = Utc(2026, 9, 11, 14, 0, 0);
+        var artifact = CreateArtifact("LiveKernelEvent", now, "report-provider-failure");
+        var sink = new InMemoryIncidentReportSink();
+
+        var monitor = CreateMonitor(
+            now,
+            sink,
+            artifacts: new[] { artifact },
+            providerEvidenceSource: (_, _, _) =>
+                throw new InvalidOperationException("provider read failed"));
+
+        var triggered = await monitor.ScanOnceAsync();
+
+        Assert.Equal(1, triggered);
+        Assert.Single(sink.Snapshot());
+    }
+
+    [Fact]
     public async Task ScanOnceAsync_DeduplicatesRepeatedEvidenceAcrossScans()
     {
         var now = Utc(2026, 9, 8, 7, 0, 0);
@@ -105,7 +181,12 @@ public sealed class LiveIncidentMonitorTests
         DateTimeOffset now,
         InMemoryIncidentReportSink sink,
         IReadOnlyList<DiagnosticEvent>? events = null,
-        IReadOnlyList<DiagnosticArtifact>? artifacts = null)
+        IReadOnlyList<DiagnosticArtifact>? artifacts = null,
+        Func<
+            DateTimeOffset,
+            DateTimeOffset,
+            CancellationToken,
+            ValueTask<IReadOnlyList<EvidenceEvent>>>? providerEvidenceSource = null)
     {
         var clock = new FakeSamplingClock(now, 10 * Stopwatch.Frequency);
         var buffer = new TelemetryRingBuffer();
@@ -126,7 +207,8 @@ public sealed class LiveIncidentMonitorTests
             new IncidentReportBuilder(),
             sink,
             clock,
-            freshnessWindow: TimeSpan.FromMinutes(2));
+            freshnessWindow: TimeSpan.FromMinutes(2),
+            providerEvidenceSource: providerEvidenceSource);
     }
 
     private static DiagnosticArtifact CreateArtifact(

@@ -87,6 +87,8 @@ export interface CrashScopeSettings {
   schemaVersion: number;
   autoAssistEnabled: boolean;
   retentionDays: number;
+  configTraceEnabled: boolean;
+  configTraceRootPath: string | null;
 }
 
 export interface StartupRegistrationStatus {

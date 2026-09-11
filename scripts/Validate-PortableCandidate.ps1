@@ -21,6 +21,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+$expectedConfigTraceSha256 = 'fe1c470a58402e82e97ee529c6a6b02822430da70e65ffc5fc5a71359ad4e521'
+
 function Write-Stage([string]$Text) {
     Write-Host "`n===== $Text =====" -ForegroundColor Cyan
 }
@@ -204,18 +206,30 @@ try {
     Expand-Archive -LiteralPath $zipPath -DestinationPath $ExtractRoot -Force
 
     $exe = Join-Path $ExtractRoot 'CrashScope.exe'
+    $configTraceExe = Join-Path $ExtractRoot 'providers\ConfigTrace\configtrace.exe'
+    $configTraceLicense = Join-Path $ExtractRoot 'providers\ConfigTrace\LICENSE.txt'
     $requiredFiles = @(
         $exe,
         (Join-Path $ExtractRoot 'wwwroot\index.html'),
         (Join-Path $ExtractRoot 'LICENSE.txt'),
         (Join-Path $ExtractRoot 'THIRD-PARTY-NOTICES.md'),
-        (Join-Path $ExtractRoot 'BUILD-INFO.txt')
+        (Join-Path $ExtractRoot 'BUILD-INFO.txt'),
+        $configTraceExe,
+        $configTraceLicense
     )
     foreach ($path in $requiredFiles) {
         if (-not (Test-Path -LiteralPath $path)) {
             throw "Portable package is missing required file '$path'."
         }
     }
+
+    $configTraceHash = (
+        Get-FileHash -LiteralPath $configTraceExe -Algorithm SHA256
+    ).Hash.ToLowerInvariant()
+    if ($configTraceHash -ne $expectedConfigTraceSha256) {
+        throw "Bundled ConfigTrace SHA256 mismatch. Expected $expectedConfigTraceSha256 but got $configTraceHash."
+    }
+    Write-Host "Bundled ConfigTrace SHA256 OK: $configTraceHash"
 
     $buildInfo = @(Get-Content -LiteralPath (Join-Path $ExtractRoot 'BUILD-INFO.txt'))
     Write-Host "Executable: $exe"
@@ -428,6 +442,8 @@ try {
             sha256 = [string]$actualHash
             buildInfo = @($buildInfo | ForEach-Object { [string]$_ })
             executable = [string]$exe
+            configTraceExecutable = [string]$configTraceExe
+            configTraceSha256 = [string]$configTraceHash
             sourceProcessId = [int]$primary.Id
             markerIncidentId = [string]$markerId
             incidentCount = [int]$finalStatus.incidentCount

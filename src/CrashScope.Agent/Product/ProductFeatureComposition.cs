@@ -1,3 +1,4 @@
+using CrashScope.Agent.Evidence.ConfigTrace;
 using CrashScope.Agent.Incidents;
 using CrashScope.Agent.Runtime;
 using CrashScope.Agent.Sampling;
@@ -6,12 +7,15 @@ using CrashScope.Agent.Settings;
 using CrashScope.Agent.Streaming;
 using CrashScope.Agent.Support;
 using CrashScope.Core.Diagnostics;
+using CrashScope.Core.Evidence;
 using CrashScope.Core.Incidents;
 using CrashScope.Core.Sessions;
 using CrashScope.Infrastructure.Diagnostics;
 using CrashScope.Infrastructure.Persistence;
 
 namespace CrashScope.Agent.Product;
+
+internal sealed record ConfigTraceRootUpdate(string? RootPath);
 
 internal static class ProductFeatureComposition
 {
@@ -27,6 +31,27 @@ internal static class ProductFeatureComposition
             ?? Path.Combine(AppContext.BaseDirectory, "CrashScope.exe");
 
         services.AddSingleton(new CrashScopeSettingsState(settingsPath));
+
+        services.AddSingleton<ConfigTraceEvidenceProvider>(sp =>
+        {
+            var settings = sp.GetRequiredService<CrashScopeSettingsState>();
+
+            return new ConfigTraceEvidenceProvider(() =>
+            {
+                var snapshot = settings.Snapshot();
+
+                return new ConfigTraceEvidenceProviderOptions
+                {
+                    Enabled = snapshot.ConfigTraceEnabled,
+                    ExecutablePath = ConfigTraceRuntimePaths.ResolveExecutablePath(),
+                    RootPath = snapshot.ConfigTraceRootPath ?? string.Empty,
+                    JournalDirectory = ConfigTraceRuntimePaths.ResolveJournalDirectory(productDataRoot)
+                };
+            });
+        });
+        services.AddSingleton<IEvidenceProvider>(sp =>
+            sp.GetRequiredService<ConfigTraceEvidenceProvider>());
+
         services.AddSingleton(new SqliteRetentionPruner(databasePath));
         services.AddSingleton<PersistenceMaintenanceGate>();
         services.AddSingleton(new WindowsStartupRegistration(executablePath));
@@ -72,6 +97,45 @@ internal static class ProductFeatureComposition
             }
         });
 
+        app.MapPut("/api/settings/configtrace/root", async (
+            ConfigTraceRootUpdate update,
+            CrashScopeSettingsState settings,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                return Results.Ok(
+                    await settings
+                        .UpdateConfigTraceRootAsync(update.RootPath, cancellationToken)
+                        .ConfigureAwait(false));
+            }
+            catch (Exception ex) when (
+                ex is ArgumentException or
+                DirectoryNotFoundException)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        });
+
+        app.MapPut("/api/settings/configtrace/{enabled:bool}", async (
+            bool enabled,
+            CrashScopeSettingsState settings,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                return Results.Ok(
+                    await settings
+                        .UpdateConfigTraceEnabledAsync(enabled, cancellationToken)
+                        .ConfigureAwait(false));
+            }
+            catch (Exception ex) when (
+                ex is InvalidOperationException or
+                DirectoryNotFoundException)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        });
         app.MapGet("/api/settings/startup", (WindowsStartupRegistration startup) =>
             Results.Ok(startup.GetStatus()));
 

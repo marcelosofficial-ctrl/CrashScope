@@ -1,6 +1,7 @@
 using CrashScope.Agent.Processes;
 using CrashScope.Agent.Sampling;
 using CrashScope.Core.Diagnostics;
+using CrashScope.Core.Evidence;
 
 namespace CrashScope.Agent.Incidents;
 
@@ -23,6 +24,11 @@ internal sealed class LiveIncidentMonitor
     private readonly TimeSpan _overlap;
     private readonly TimeSpan _freshnessWindow;
     private readonly Func<CancellationToken, ValueTask<ProcessObservation?>>? _processObservationProvider;
+    private readonly Func<
+        DateTimeOffset,
+        DateTimeOffset,
+        CancellationToken,
+        ValueTask<IReadOnlyList<EvidenceEvent>>>? _providerEvidenceSource;
     private readonly object _pendingSync = new();
     private readonly HashSet<Task> _pendingReports = new();
     private DateTimeOffset _cursorUtc;
@@ -39,7 +45,12 @@ internal sealed class LiveIncidentMonitor
         TimeSpan? overlap = null,
         TimeSpan? freshnessWindow = null,
         Func<CancellationToken, ValueTask<ProcessObservation?>>? processObservationProvider = null,
-        TimeSpan? reconciliationInterval = null)
+        TimeSpan? reconciliationInterval = null,
+        Func<
+            DateTimeOffset,
+            DateTimeOffset,
+            CancellationToken,
+            ValueTask<IReadOnlyList<EvidenceEvent>>>? providerEvidenceSource = null)
     {
         ArgumentNullException.ThrowIfNull(eventSource);
         ArgumentNullException.ThrowIfNull(artifactSource);
@@ -61,6 +72,7 @@ internal sealed class LiveIncidentMonitor
         _overlap = overlap ?? DefaultOverlap;
         _freshnessWindow = freshnessWindow ?? DefaultFreshnessWindow;
         _processObservationProvider = processObservationProvider;
+        _providerEvidenceSource = providerEvidenceSource;
 
         if (_scanInterval <= TimeSpan.Zero)
         {
@@ -259,11 +271,29 @@ internal sealed class LiveIncidentMonitor
             .ReadSinceAsync(sinceUtc, 512, CancellationToken.None)
             .ConfigureAwait(false);
 
+        IReadOnlyList<EvidenceEvent> providerEvidence = Array.Empty<EvidenceEvent>();
+        if (_providerEvidenceSource is not null)
+        {
+            try
+            {
+                providerEvidence = await _providerEvidenceSource(
+                        incidentTimeUtc - _reportBuilder.EvidenceWindow,
+                        incidentTimeUtc + _reportBuilder.EvidenceWindow,
+                        CancellationToken.None)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                // Optional evidence providers must never block the core incident report.
+            }
+        }
+
         var report = _reportBuilder.Build(
             capture,
             events,
             artifacts,
-            processObservation);
+            processObservation,
+            providerEvidence);
 
         await _reportSink.WriteAsync(report, CancellationToken.None)
             .ConfigureAwait(false);

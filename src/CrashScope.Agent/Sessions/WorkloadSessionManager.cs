@@ -1,6 +1,8 @@
+using CrashScope.Agent.Evidence;
 using CrashScope.Agent.Incidents;
 using CrashScope.Agent.Processes;
 using CrashScope.Agent.Sampling;
+using CrashScope.Core.Evidence;
 using CrashScope.Core.Incidents;
 using CrashScope.Core.Sessions;
 using CrashScope.Core.Telemetry;
@@ -15,6 +17,9 @@ internal sealed record SessionAttachResult(WorkloadSession? Session, string? Det
 internal sealed class WorkloadSessionManager : ITelemetryFrameSink
 {
     private static readonly TimeSpan IncidentAssociationGrace = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan RecentEvidenceCaptureWindow = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan RecentEvidenceSnapshotTimeout = TimeSpan.FromSeconds(1);
+    private const int MaximumRecentEvidenceEvents = 256;
     private static readonly TimeSpan UnavailableExitWaitFallbackInterval = TimeSpan.FromSeconds(5);
 
     private readonly MonitoredProcessTracker _processTracker;
@@ -22,6 +27,7 @@ internal sealed class WorkloadSessionManager : ITelemetryFrameSink
     private readonly IWorkloadSessionRepository _repository;
     private readonly ISamplingClock _clock;
     private readonly IProcessExitWaiter _processExitWaiter;
+    private readonly EvidenceProviderHost _evidenceProviders;
     private readonly SemaphoreSlim _lifecycleGate = new(1, 1);
     private readonly SemaphoreSlim _activeSessionSignal = new(0, 1);
     private readonly object _sync = new();
@@ -29,18 +35,22 @@ internal sealed class WorkloadSessionManager : ITelemetryFrameSink
     private WorkloadSession? _activeSession;
     private ProcessInstance? _activeProcess;
     private CancellationTokenSource? _activeExitWaitCancellation;
+    private EvidenceProviderSessionSet? _activeEvidenceProviders;
+    private readonly List<EvidenceEvent> _recentEvidenceEvents = new();
 
     public WorkloadSessionManager(
         MonitoredProcessTracker processTracker,
         SamplingModeController samplingMode,
         IWorkloadSessionRepository repository,
-        ISamplingClock clock)
+        ISamplingClock clock,
+        EvidenceProviderHost? evidenceProviders = null)
         : this(
             processTracker,
             samplingMode,
             repository,
             clock,
-            new SystemProcessExitWaiter())
+            new SystemProcessExitWaiter(),
+            evidenceProviders)
     {
     }
 
@@ -49,7 +59,8 @@ internal sealed class WorkloadSessionManager : ITelemetryFrameSink
         SamplingModeController samplingMode,
         IWorkloadSessionRepository repository,
         ISamplingClock clock,
-        IProcessExitWaiter processExitWaiter)
+        IProcessExitWaiter processExitWaiter,
+        EvidenceProviderHost? evidenceProviders = null)
     {
         ArgumentNullException.ThrowIfNull(processTracker);
         ArgumentNullException.ThrowIfNull(samplingMode);
@@ -62,6 +73,8 @@ internal sealed class WorkloadSessionManager : ITelemetryFrameSink
         _repository = repository;
         _clock = clock;
         _processExitWaiter = processExitWaiter;
+        _evidenceProviders = evidenceProviders
+            ?? new EvidenceProviderHost(Array.Empty<IEvidenceProvider>());
     }
 
     public WorkloadSession? ActiveSnapshot()
@@ -72,6 +85,58 @@ internal sealed class WorkloadSessionManager : ITelemetryFrameSink
         }
     }
 
+    public async ValueTask<IReadOnlyList<EvidenceEvent>> ReadActiveEvidenceWindowAsync(
+        DateTimeOffset startUtc,
+        DateTimeOffset endUtc,
+        CancellationToken cancellationToken = default)
+    {
+        if (startUtc.Offset != TimeSpan.Zero)
+        {
+            throw new ArgumentException("Evidence window start must be UTC.", nameof(startUtc));
+        }
+
+        if (endUtc.Offset != TimeSpan.Zero)
+        {
+            throw new ArgumentException("Evidence window end must be UTC.", nameof(endUtc));
+        }
+
+        if (endUtc < startUtc)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(endUtc),
+                "Evidence window end must not precede the start.");
+        }
+
+        EvidenceProviderSessionSet? evidenceProviders;
+        IReadOnlyList<EvidenceEvent> recentEvidence;
+
+        lock (_sync)
+        {
+            evidenceProviders = _activeEvidenceProviders;
+
+            recentEvidence = evidenceProviders is null
+                ? _recentEvidenceEvents
+                    .Where(item =>
+                        item.TimestampUtc >= startUtc &&
+                        item.TimestampUtc <= endUtc)
+                    .OrderBy(item => item.TimestampUtc)
+                    .ThenBy(item => item.ObservedAtUtc)
+                    .Take(MaximumRecentEvidenceEvents)
+                    .ToArray()
+                : Array.Empty<EvidenceEvent>();
+        }
+
+        if (evidenceProviders is null)
+        {
+            return recentEvidence;
+        }
+
+        var result = await evidenceProviders
+            .ReadWindowAsync(startUtc, endUtc, cancellationToken)
+            .ConfigureAwait(false);
+
+        return result.Events;
+    }
     public IReadOnlyList<WorkloadSession> Snapshot()
     {
         lock (_sync)
@@ -104,6 +169,7 @@ internal sealed class WorkloadSessionManager : ITelemetryFrameSink
             }
 
             CancellationTokenSource? oldExitWait;
+            EvidenceProviderSessionSet? oldEvidenceProviders;
             lock (_sync)
             {
                 _sessions.Clear();
@@ -112,9 +178,13 @@ internal sealed class WorkloadSessionManager : ITelemetryFrameSink
                 _activeProcess = null;
                 oldExitWait = _activeExitWaitCancellation;
                 _activeExitWaitCancellation = null;
+                oldEvidenceProviders = _activeEvidenceProviders;
+                _activeEvidenceProviders = null;
+                _recentEvidenceEvents.Clear();
             }
 
             CancelAndDispose(oldExitWait);
+            await DisposeEvidenceProvidersAsync(oldEvidenceProviders).ConfigureAwait(false);
             _samplingMode.SetMode(SamplingMode.Background);
         }
         finally
@@ -188,7 +258,25 @@ internal sealed class WorkloadSessionManager : ITelemetryFrameSink
                 null,
                 SessionTelemetrySummary.Empty);
 
-            await _repository.SaveAsync(session, cancellationToken).ConfigureAwait(false);
+            var evidenceProviders = await _evidenceProviders
+                .StartAsync(
+                    new EvidenceProviderSessionContext(
+                        session.SessionId,
+                        session.StartedAtUtc,
+                        session.ProcessId,
+                        session.ExecutablePath),
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            try
+            {
+                await _repository.SaveAsync(session, cancellationToken).ConfigureAwait(false);
+            }
+            catch
+            {
+                await DisposeEvidenceProvidersAsync(evidenceProviders).ConfigureAwait(false);
+                throw;
+            }
 
             var exitWaitCancellation = new CancellationTokenSource();
             lock (_sync)
@@ -197,6 +285,8 @@ internal sealed class WorkloadSessionManager : ITelemetryFrameSink
                 _activeSession = session;
                 _activeProcess = process;
                 _activeExitWaitCancellation = exitWaitCancellation;
+                _activeEvidenceProviders = evidenceProviders;
+                _recentEvidenceEvents.Clear();
             }
 
             SignalActiveSession();
@@ -458,6 +548,27 @@ internal sealed class WorkloadSessionManager : ITelemetryFrameSink
                 reason);
             await _repository.SaveAsync(ended, cancellationToken).ConfigureAwait(false);
 
+            EvidenceProviderSessionSet? evidenceProviders;
+            lock (_sync)
+            {
+                evidenceProviders = _activeEvidenceProviders;
+            }
+
+            if (reason is SessionEndReason.ProcessExited or SessionEndReason.PidReused)
+            {
+                await CaptureRecentEvidenceAsync(
+                        evidenceProviders,
+                        ended.EndedAtUtc ?? ended.StartedAtUtc)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                lock (_sync)
+                {
+                    _recentEvidenceEvents.Clear();
+                }
+            }
+
             CancellationTokenSource? exitWaitCancellation;
             lock (_sync)
             {
@@ -466,10 +577,12 @@ internal sealed class WorkloadSessionManager : ITelemetryFrameSink
                 _activeProcess = null;
                 exitWaitCancellation = _activeExitWaitCancellation;
                 _activeExitWaitCancellation = null;
+                _activeEvidenceProviders = null;
             }
 
             CancelAndDispose(exitWaitCancellation);
             _samplingMode.SetMode(SamplingMode.Background);
+            await DisposeEvidenceProvidersAsync(evidenceProviders).ConfigureAwait(false);
             return ended;
         }
         finally
@@ -500,6 +613,63 @@ internal sealed class WorkloadSessionManager : ITelemetryFrameSink
         finally
         {
             source.Dispose();
+        }
+    }
+
+    private async ValueTask CaptureRecentEvidenceAsync(
+        EvidenceProviderSessionSet? evidenceProviders,
+        DateTimeOffset endedAtUtc)
+    {
+        IReadOnlyList<EvidenceEvent> captured = Array.Empty<EvidenceEvent>();
+
+        if (evidenceProviders is not null)
+        {
+            try
+            {
+                var startUtc = endedAtUtc - RecentEvidenceCaptureWindow;
+                using var timeout = new CancellationTokenSource(RecentEvidenceSnapshotTimeout);
+
+                var result = await evidenceProviders
+                    .ReadWindowAsync(startUtc, endedAtUtc, timeout.Token)
+                    .ConfigureAwait(false);
+
+                captured = result.Events
+                    .Where(item =>
+                        item.TimestampUtc >= startUtc &&
+                        item.TimestampUtc <= endedAtUtc)
+                    .OrderBy(item => item.TimestampUtc)
+                    .ThenBy(item => item.ObservedAtUtc)
+                    .TakeLast(MaximumRecentEvidenceEvents)
+                    .ToArray();
+            }
+            catch
+            {
+                // Evidence enrichment must never delay or fail the core workload shutdown.
+                captured = Array.Empty<EvidenceEvent>();
+            }
+        }
+
+        lock (_sync)
+        {
+            _recentEvidenceEvents.Clear();
+            _recentEvidenceEvents.AddRange(captured);
+        }
+    }
+    private static async ValueTask DisposeEvidenceProvidersAsync(
+        EvidenceProviderSessionSet? evidenceProviders)
+    {
+        if (evidenceProviders is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await evidenceProviders.DisposeAsync().ConfigureAwait(false);
+        }
+        catch
+        {
+            // Evidence enrichment must never keep the core workload lifecycle open.
         }
     }
 

@@ -12,6 +12,7 @@ import {
   setAutoAssist,
   stopActiveSession,
 } from './api';
+import ConfigTraceControl from './ConfigTraceControl';
 import EverydayStatusPanel from './EverydayStatusPanel';
 import IncidentPanel from './IncidentPanel';
 import type {
@@ -306,6 +307,7 @@ export default function App() {
           <a href="#overview" className="nav-link nav-link--active">Overview</a>
           <a href="#incidents" className="nav-link">Incidents</a>
           <a href="#workloads" className="nav-link">Workloads</a>
+          <a href="#configtrace" className="nav-link">ConfigTrace</a>
           <a href="#sessions" className="nav-link">History</a>
         </nav>
 
@@ -467,6 +469,8 @@ export default function App() {
             </dl>
           </article>
         </section>
+
+        <ConfigTraceControl />
 
         <section id="incidents">
           <div className="section-intro"><div><p className="eyebrow">WHAT HAPPENED?</p><h2>Recent diagnostic evidence</h2></div><span>{incidents.length ? `${incidents.length} captured` : 'Nothing important captured yet'}</span></div>

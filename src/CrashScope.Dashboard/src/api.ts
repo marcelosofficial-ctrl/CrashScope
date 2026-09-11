@@ -41,6 +41,18 @@ export async function setAutoAssist(enabled: boolean): Promise<CrashScopeSetting
 export function setRetentionDays(days: number): Promise<CrashScopeSettings> {
   return request<CrashScopeSettings>(`/api/settings/retention/${days}`, { method: 'PUT' });
 }
+
+export function setConfigTraceRoot(rootPath: string | null): Promise<CrashScopeSettings> {
+  return request<CrashScopeSettings>('/api/settings/configtrace/root', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rootPath }),
+  });
+}
+
+export function setConfigTraceEnabled(enabled: boolean): Promise<CrashScopeSettings> {
+  return request<CrashScopeSettings>(`/api/settings/configtrace/${enabled}`, { method: 'PUT' });
+}
 export function getStartupStatus(): Promise<StartupRegistrationStatus> {
   return request<StartupRegistrationStatus>('/api/settings/startup');
 }

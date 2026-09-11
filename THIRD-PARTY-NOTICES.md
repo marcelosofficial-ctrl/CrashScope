@@ -62,6 +62,21 @@ CrashScope's Windows portable package includes the .NET runtime components requi
 - Source: https://github.com/DefinitelyTyped/DefinitelyTyped
 - License: MIT for the relevant type packages unless otherwise stated in the package metadata.
 
+## Bundled diagnostic provider
+
+### ConfigTrace 1.0.1
+
+CrashScope 1.1 bundles the standalone ConfigTrace executable as an optional, process-isolated configuration-evidence provider.
+
+- Component: ConfigTrace
+- Version: 1.0.1
+- License: MIT
+- Copyright: Copyright (c) 2026 Marcelo
+- Bundled license: `providers/ConfigTrace/LICENSE.txt`
+- Frozen source commit used for this integration: `b629c970dfc14fca5df1e0ef2b0d1d07d0d8c56c`
+- Frozen Windows executable SHA-256: `fe1c470a58402e82e97ee529c6a6b02822430da70e65ffc5fc5a71359ad4e521`
+
+CrashScope launches ConfigTrace only when the user has opted in, configured an existing root directory, and a workload is being monitored. ConfigTrace reads source configuration files without modifying them, redacts sensitive-looking structured values, and emits nearby configuration changes as correlation evidence. CrashScope treats those changes as **Context** evidence; proximity does not establish causation.
 ## CrashScope license
 
 CrashScope itself is distributed under the MIT License. See [`LICENSE`](LICENSE).

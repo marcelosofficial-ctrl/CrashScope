@@ -21,11 +21,16 @@ function Write-Step([string]$Message) {
 
 $resolvedPublish = (Resolve-Path -LiteralPath $PublishDirectory).Path
 $exe = Join-Path $resolvedPublish "CrashScope.exe"
+$expectedConfigTraceSha256 = "fe1c470a58402e82e97ee529c6a6b02822430da70e65ffc5fc5a71359ad4e521"
+$configTraceExe = Join-Path $resolvedPublish "providers\ConfigTrace\configtrace.exe"
+$configTraceLicense = Join-Path $resolvedPublish "providers\ConfigTrace\LICENSE.txt"
 $required = @(
     $exe,
     (Join-Path $resolvedPublish "wwwroot\index.html"),
     (Join-Path $resolvedPublish "LICENSE.txt"),
-    (Join-Path $resolvedPublish "THIRD-PARTY-NOTICES.md")
+    (Join-Path $resolvedPublish "THIRD-PARTY-NOTICES.md"),
+    $configTraceExe,
+    $configTraceLicense
 )
 
 if ($RequireBuildInfo) {
@@ -37,6 +42,14 @@ foreach ($path in $required) {
         throw "Portable build is missing required file: $path"
     }
 }
+
+$configTraceHash = (
+    Get-FileHash -LiteralPath $configTraceExe -Algorithm SHA256
+).Hash.ToLowerInvariant()
+if ($configTraceHash -ne $expectedConfigTraceSha256) {
+    throw "Portable ConfigTrace SHA256 mismatch. Expected $expectedConfigTraceSha256 but got $configTraceHash."
+}
+Write-Step "Verified bundled ConfigTrace SHA256: $configTraceHash"
 
 $existingListeners = @(Get-NetTCPConnection -LocalPort 5077 -State Listen -ErrorAction SilentlyContinue)
 if ($existingListeners.Count -gt 0) {

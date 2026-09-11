@@ -2,6 +2,7 @@ using System.Diagnostics;
 using CrashScope.Agent.Incidents;
 using CrashScope.Agent.Processes;
 using CrashScope.Core.Diagnostics;
+using CrashScope.Core.Evidence;
 using CrashScope.Core.Incidents;
 using CrashScope.Core.Telemetry;
 
@@ -122,6 +123,95 @@ public sealed class IncidentReportBuilderTests
 
         Assert.Single(report.Evidence);
         Assert.Equal(IncidentClassification.Unclassified, report.Classification);
+    }
+
+    [Fact]
+    public void Build_ProviderEvidenceIsContextWithRelativeTimingAndDistinctObservationTime()
+    {
+        var incidentTime = Utc(2026, 9, 11, 14, 0, 0);
+        var occurredAt = incidentTime.AddMilliseconds(-31800);
+        var observedAt = occurredAt.AddMilliseconds(250);
+        var providerEvidence = new[]
+        {
+            new EvidenceEvent(
+                occurredAt,
+                observedAt,
+                "ConfigTrace",
+                "ConfigChange",
+                EvidenceSeverity.Information,
+                "Renderer changed from DX11 to DX12.")
+        };
+
+        var report = new IncidentReportBuilder().Build(
+            CreateCapture(incidentTime),
+            Array.Empty<DiagnosticEvent>(),
+            Array.Empty<DiagnosticArtifact>(),
+            providerEvidence: providerEvidence);
+
+        var context = Assert.Single(
+            report.Evidence,
+            item => item.Source == "ConfigTrace");
+
+        Assert.Equal(IncidentEvidenceRole.Context, context.Role);
+        Assert.Equal(occurredAt, context.OccurredAtUtc);
+        Assert.Equal(observedAt, context.ObservedAtUtc);
+        Assert.Equal(
+            "Renderer changed from DX11 to DX12 31.8 seconds before this incident.",
+            context.Summary);
+    }
+
+    [Fact]
+    public void Build_IgnoresProviderEvidenceOutsideEvidenceWindow()
+    {
+        var incidentTime = Utc(2026, 9, 11, 14, 0, 0);
+        var providerEvidence = new[]
+        {
+            new EvidenceEvent(
+                incidentTime.AddSeconds(-121),
+                incidentTime.AddSeconds(-120),
+                "ConfigTrace",
+                "ConfigChange",
+                EvidenceSeverity.Information,
+                "HDR changed from false to true.")
+        };
+
+        var report = new IncidentReportBuilder().Build(
+            CreateCapture(incidentTime),
+            Array.Empty<DiagnosticEvent>(),
+            Array.Empty<DiagnosticArtifact>(),
+            providerEvidence: providerEvidence);
+
+        Assert.Single(report.Evidence);
+        Assert.DoesNotContain(report.Evidence, item => item.Source == "ConfigTrace");
+    }
+
+    [Fact]
+    public void Build_ProviderKindCannotEscalateDiagnosticClassification()
+    {
+        var incidentTime = Utc(2026, 9, 11, 14, 0, 0);
+        var providerEvidence = new[]
+        {
+            new EvidenceEvent(
+                incidentTime,
+                incidentTime,
+                "ExternalProvider",
+                DiagnosticEventKind.HardwareError.ToString(),
+                EvidenceSeverity.Critical,
+                "External provider reported a hardware-like label.")
+        };
+
+        var report = new IncidentReportBuilder().Build(
+            CreateCapture(incidentTime),
+            Array.Empty<DiagnosticEvent>(),
+            Array.Empty<DiagnosticArtifact>(),
+            providerEvidence: providerEvidence);
+
+        Assert.Equal(IncidentClassification.Unclassified, report.Classification);
+        Assert.Equal(
+            IncidentEvidenceRole.Context,
+            Assert.Single(
+                report.Evidence,
+                item => item.Source == "ExternalProvider").Role);
     }
 
     [Fact]

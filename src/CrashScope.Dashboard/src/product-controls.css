@@ -224,3 +224,177 @@
     transition: none;
   }
 }
+
+/* CrashScope 1.1 ConfigTrace controls */
+
+.configtrace-panel {
+  scroll-margin-top: 24px;
+  margin-bottom: 18px;
+}
+
+.configtrace-panel__heading {
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.configtrace-panel__heading h2 {
+  margin-bottom: 6px;
+}
+
+.configtrace-panel__heading p:not(.eyebrow) {
+  max-width: 760px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.configtrace-state {
+  min-width: 58px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.025);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.configtrace-state--on {
+  color: #b9ffe5;
+  border-color: rgba(97, 231, 181, 0.4);
+  background: rgba(97, 231, 181, 0.1);
+}
+
+.configtrace-root {
+  display: grid;
+  gap: 7px;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.configtrace-root label,
+.configtrace-enable strong,
+.configtrace-context-note strong {
+  color: #dce6f2;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.configtrace-root__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.configtrace-root input {
+  min-width: 0;
+  height: 35px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+  color: #dce6f2;
+  background: var(--surface-3);
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 9px;
+}
+
+.configtrace-root input:focus-visible {
+  border-color: rgba(85, 217, 255, 0.62);
+  box-shadow: 0 0 0 2px rgba(85, 217, 255, 0.12);
+}
+
+.configtrace-root input:disabled {
+  opacity: 0.55;
+}
+
+.configtrace-root small,
+.configtrace-panel__hint,
+.configtrace-panel__error {
+  color: var(--muted-2);
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.configtrace-enable {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.configtrace-enable > div {
+  display: grid;
+  gap: 4px;
+}
+
+.configtrace-enable span {
+  max-width: 780px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.configtrace-context-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px 14px;
+  margin-top: 14px;
+  padding: 12px 13px;
+  border: 1px solid rgba(132, 167, 255, 0.18);
+  border-radius: 9px;
+  background: rgba(132, 167, 255, 0.035);
+}
+
+.configtrace-context-note strong {
+  color: #cdd8e8;
+}
+
+.configtrace-context-note span {
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.configtrace-panel__hint,
+.configtrace-panel__error {
+  display: block;
+  margin-top: 10px;
+}
+
+.configtrace-panel__error {
+  color: #ffc0c5;
+}
+
+@media (max-width: 700px) {
+  .configtrace-panel__heading,
+  .configtrace-context-note {
+    grid-template-columns: 1fr;
+  }
+
+  .configtrace-root__row,
+  .configtrace-enable {
+    grid-template-columns: 1fr;
+  }
+
+  .configtrace-root__row .button,
+  .configtrace-enable .toggle-button {
+    justify-self: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .configtrace-panel,
+  .configtrace-panel * {
+    scroll-behavior: auto;
+    transition: none !important;
+    animation: none !important;
+  }
+}

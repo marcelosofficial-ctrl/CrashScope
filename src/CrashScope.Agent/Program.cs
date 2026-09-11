@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CrashScope.Agent.Buffering;
+using CrashScope.Agent.Evidence;
 using CrashScope.Agent.Incidents;
 using CrashScope.Agent.Processes;
 using CrashScope.Agent.Runtime;
@@ -104,6 +105,7 @@ builder.Services.AddSingleton<IWorkloadSessionRepository>(sp =>
     sp.GetRequiredService<SqliteWorkloadSessionRepository>());
 builder.Services.AddSingleton(new SqliteSessionEnvironmentStore(databasePath));
 
+builder.Services.AddSingleton<EvidenceProviderHost>();
 builder.Services.AddSingleton<WorkloadSessionManager>();
 builder.Services.AddSingleton<AutomaticWorkloadMonitor>();
 
@@ -155,7 +157,10 @@ builder.Services.AddSingleton<LiveIncidentMonitor>(sp =>
         scanInterval: TimeSpan.FromSeconds(5),
         processObservationProvider: sp
             .GetRequiredService<WorkloadSessionManager>()
-            .ObserveActiveProcessAsync));
+            .ObserveActiveProcessAsync,
+        providerEvidenceSource: sp
+            .GetRequiredService<WorkloadSessionManager>()
+            .ReadActiveEvidenceWindowAsync));
 
 builder.Services.AddHostedService<CrashScopeRuntimeHostedService>();
 

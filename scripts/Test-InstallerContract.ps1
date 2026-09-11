@@ -75,6 +75,9 @@ Assert-Match $iss '(?im)^Name:\s*"desktopicon".*Flags:\s*unchecked\s*$' `
 Assert-Match $iss '(?im)^Source:\s*"\{#SourceDir\}\\\*";\s*DestDir:\s*"\{app\}"' `
     'portable publish tree is not copied into the application directory.'
 
+Assert-Match $iss '(?im)^Source:\s*"\{#SourceDir\}\\\*";.*Flags:.*\brecursesubdirs\b.*\bcreateallsubdirs\b' `
+    'installer must recursively preserve bundled provider subdirectories.'
+
 Assert-NoMatch $iss '(?im)^\s*\[Registry\]\s*$' `
     'installer must not take ownership of CrashScope Start-with-Windows registry state.'
 

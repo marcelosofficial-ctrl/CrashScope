@@ -1,6 +1,7 @@
 using System.Globalization;
 using CrashScope.Agent.Processes;
 using CrashScope.Core.Diagnostics;
+using CrashScope.Core.Evidence;
 using CrashScope.Core.Incidents;
 using CrashScope.Core.Telemetry;
 
@@ -9,6 +10,7 @@ namespace CrashScope.Agent.Incidents;
 internal sealed class IncidentReportBuilder
 {
     private static readonly TimeSpan DefaultEvidenceWindow = TimeSpan.FromMinutes(2);
+    private const int MaximumProviderEvidenceItems = 256;
 
     private readonly TimeSpan _evidenceWindow;
 
@@ -21,11 +23,14 @@ internal sealed class IncidentReportBuilder
         }
     }
 
+    internal TimeSpan EvidenceWindow => _evidenceWindow;
+
     public IncidentReport Build(
         IncidentCapture capture,
         IReadOnlyList<DiagnosticEvent> events,
         IReadOnlyList<DiagnosticArtifact> artifacts,
-        ProcessObservation? processObservation = null)
+        ProcessObservation? processObservation = null,
+        IReadOnlyList<EvidenceEvent>? providerEvidence = null)
     {
         ArgumentNullException.ThrowIfNull(capture);
         ArgumentNullException.ThrowIfNull(events);
@@ -54,6 +59,17 @@ internal sealed class IncidentReportBuilder
             .Where(item => IsNearIncident(ArtifactTime(item), incidentTimeUtc))
             .Select(ToEvidenceItem));
 
+        // External provider context can enrich the timeline, but it must never
+        // change CrashScope's classification of Windows/process evidence.
+        var classification = Classify(evidence, processObservation);
+
+        if (providerEvidence is not null)
+        {
+            evidence.AddRange(BuildProviderEvidenceItems(
+                providerEvidence,
+                incidentTimeUtc));
+        }
+
         var processContext = processObservation is null
             ? null
             : new IncidentProcessContext(
@@ -64,7 +80,6 @@ internal sealed class IncidentReportBuilder
                 processObservation.ObservedAtUtc);
 
         var telemetry = SummarizeTelemetry(capture.TelemetryFrames);
-        var classification = Classify(evidence, processObservation);
         var title = BuildTitle(classification, processObservation);
         var summary = BuildSummary(evidence.Count, telemetry.FrameCount, processObservation);
         var assessment = BuildAssessment(classification, evidence, processObservation);
@@ -153,6 +168,21 @@ internal sealed class IncidentReportBuilder
                 ? $"event:{item.LogName}:{item.ProviderName}:{item.RecordId.Value}"
                 : null);
 
+    internal IReadOnlyList<IncidentEvidenceItem> BuildProviderEvidenceItems(
+        IReadOnlyList<EvidenceEvent> providerEvidence,
+        DateTimeOffset incidentTimeUtc)
+    {
+        ArgumentNullException.ThrowIfNull(providerEvidence);
+
+        return providerEvidence
+            .Where(item => IsNearIncident(item.TimestampUtc, incidentTimeUtc))
+            .OrderBy(item => (item.TimestampUtc - incidentTimeUtc).Duration())
+            .ThenBy(item => item.TimestampUtc)
+            .ThenBy(item => item.ObservedAtUtc)
+            .Take(MaximumProviderEvidenceItems)
+            .Select(item => ToEvidenceItem(item, incidentTimeUtc))
+            .ToArray();
+    }
     private static IncidentEvidenceItem ToEvidenceItem(DiagnosticArtifact item) =>
         new(
             ArtifactTime(item),
@@ -166,6 +196,43 @@ internal sealed class IncidentReportBuilder
                 : !string.IsNullOrWhiteSpace(item.RelatedPath)
                     ? $"path:{item.RelatedPath}"
                     : $"artifact:{item.ArtifactPath}");
+
+    private static IncidentEvidenceItem ToEvidenceItem(
+        EvidenceEvent item,
+        DateTimeOffset incidentTimeUtc) =>
+        new(
+            item.TimestampUtc,
+            item.ObservedAtUtc,
+            IncidentEvidenceRole.Context,
+            item.Source,
+            item.Kind,
+            BuildProviderEvidenceSummary(item, incidentTimeUtc),
+            $"provider:{item.Source}:{item.Kind}:{item.TimestampUtc.UtcTicks}:{item.ObservedAtUtc.UtcTicks}");
+
+    private static string BuildProviderEvidenceSummary(
+        EvidenceEvent item,
+        DateTimeOffset incidentTimeUtc)
+    {
+        var summary = item.Summary.Trim();
+        if (summary.EndsWith(".", StringComparison.Ordinal))
+        {
+            summary = summary[..^1];
+        }
+
+        var relativeSeconds = (item.TimestampUtc - incidentTimeUtc).TotalSeconds;
+        if (Math.Abs(relativeSeconds) < 0.05)
+        {
+            return $"{summary} at approximately the incident time.";
+        }
+
+        var seconds = Math.Abs(relativeSeconds).ToString(
+            "0.0",
+            CultureInfo.InvariantCulture);
+
+        return relativeSeconds < 0
+            ? $"{summary} {seconds} seconds before this incident."
+            : $"{summary} {seconds} seconds after this incident.";
+    }
 
     private static string BuildEventSummary(DiagnosticEvent item) =>
         item.Kind switch

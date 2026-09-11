@@ -15,6 +15,8 @@ It is designed for gamers, PC enthusiasts, overclockers/undervolters, hardware t
 - [Hardware validation matrix](docs/hardware-validation.md)
 - [Public beta validation checklist](docs/beta-validation-checklist.md)
 - [One-command portable validation](docs/local-release-validation.md)
+- [v1.1.0 release notes](docs/release-notes-v1.1.0.md)
+- [v1.0.0 release notes](docs/release-notes-v1.0.0.md)
 - [v0.1.0 release notes](docs/release-notes-v0.1.0.md)
 - [Changelog](CHANGELOG.md)
 - [Contributing](CONTRIBUTING.md)
@@ -54,6 +56,10 @@ CrashScope is designed to say things like:
 - Bounded, drop-stale WebSocket fanout so a slow browser cannot backpressure hardware sampling
 - Safe user diagnostic markers for testing the full incident pipeline without deliberately crashing anything
 - Incident drill-down with telemetry summary, process context, and trigger/corroborating/context evidence roles
+- Generic process-isolated external evidence-provider architecture
+- Optional bundled ConfigTrace 1.0.1 configuration-change evidence provider, disabled by default
+- User-selected ConfigTrace root with workload-scoped sidecar lifecycle and bounded Context evidence correlation
+- Safe user diagnostic markers that can include nearby provider Context evidence without changing marker classification
 - Second-instance detection that reuses an already-running healthy CrashScope instance
 - Normal portable launch opens the dashboard automatically; `--no-browser` supports automation/CI
 - Localhost browser-origin protection against unrelated websites attempting API/WebSocket access
@@ -70,7 +76,7 @@ Real-machine measurements on a Ryzen 5 7500F / Radeon RX 9070 XT development sys
 | Current active sampler baseline | **0.0578%** | **75.31 MB avg / 75.87 MB peak** |
 | SQLite background baseline | ~0.064% | ~75 MB |
 | Dashboard open, live WebSocket connected | **~0.068%** | **~91 MB** |
-| Final combined next-beta gate | **0.2657%** | **93 MB avg / 95.83 MB peak** |
+| Frozen 1.0 final integrated gate | **0.2327%** | **91.36 MB avg / 94.41 MB peak** |
 
 The current sampler baseline used 20-second measurement windows after a 3-second settle delay, normalized process CPU by 12 logical processors, sampled memory once per second, and recorded zero incidents during the run. Background sampling was 0.5 Hz and active sampling was 1 Hz.
 
@@ -81,7 +87,7 @@ During the separate dashboard-open validation:
 - 0 delivery misses
 - no additional hardware polling loop created by the dashboard
 
-The final combined next-beta gate also recorded 0 stale-frame drops and 0 stream-delivery misses while validating the integrated product path. These are development-machine baselines rather than universal hardware guarantees. Performance is treated as a product requirement, with an Agent CPU budget of <= 0.5% and working-set budget of <= 100 MB.
+The frozen 1.0 final integrated gate also recorded 0 stale-frame drops and 0 stream-delivery misses while validating the integrated product path. These are development-machine baselines rather than universal hardware guarantees. Performance is treated as a product requirement, with an Agent CPU budget of <= 0.5% and working-set budget of <= 100 MB.
 
 ## Architecture
 
@@ -236,7 +242,7 @@ dotnet build CrashScope.sln -c Release
 dotnet test CrashScope.sln -c Release --no-build
 ```
 
-The reconciled v0.1 beta integration baseline contains **185 automated .NET tests** across Core, Infrastructure, and Agent projects.
+CrashScope 1.1 currently contains **239 automated .NET tests** across Core, Infrastructure, and Agent projects.
 
 ### Run
 
@@ -328,13 +334,12 @@ This distinction is deliberate and central to the project.
 
 Near-term milestones:
 
-- reconcile the validated next-beta integration branch with `main`
-- make the explicit first-public-beta release decision
-- validate the GitHub-downloaded beta on a second Windows PC
-- validate NVIDIA and Intel hardware on real machines
-- capture sanitized official portfolio screenshots
-- richer incident/session comparison views
-- installer after portable-beta validation
+- complete true installed 1.0.0 -> 1.1.0 upgrade/state-preservation validation
+- complete the final 1.1 performance, UTF-8, privacy/security, and cleanliness seal
+- repeat genuine second-PC validation for the exact frozen 1.1 artifact
+- validate NVIDIA and newer Intel GPU/CPU paths on additional real machines
+- add richer incident/session comparison views
+- evaluate GapTrace as a future optional process-isolated evidence provider after 1.1
 - optional code signing
 
 AI-generated root-cause speculation is intentionally **not** an MVP dependency; structured local evidence comes first.

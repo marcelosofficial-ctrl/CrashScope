@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param(
-    [string]$OutputRoot
+    [string]$OutputRoot,
+    [string]$ConfigTraceExecutable,
+    [string]$ConfigTraceLicense
 )
 
 Set-StrictMode -Version Latest
@@ -13,6 +15,21 @@ function Write-Stage([string]$Text) {
 $repoRoot = [IO.Path]::GetFullPath(
     (Join-Path $PSScriptRoot '..')
 )
+
+$configTraceVersion = '1.0.1'
+$configTraceSourceCommit = 'b629c970dfc14fca5df1e0ef2b0d1d07d0d8c56c'
+$expectedConfigTraceSha256 = 'fe1c470a58402e82e97ee529c6a6b02822430da70e65ffc5fc5a71359ad4e521'
+$expectedConfigTraceLicenseSha256 = '914c2351f89a915bda78f2f27ceb2745603a76c7bf9b16392432de32a85b3175'
+
+if ([string]::IsNullOrWhiteSpace($ConfigTraceExecutable)) {
+    $ConfigTraceExecutable = Join-Path $repoRoot '..\ConfigTrace\target\release\configtrace.exe'
+}
+if ([string]::IsNullOrWhiteSpace($ConfigTraceLicense)) {
+    $ConfigTraceLicense = Join-Path $repoRoot '..\ConfigTrace\LICENSE'
+}
+
+$configTraceExecutableFull = [IO.Path]::GetFullPath($ConfigTraceExecutable)
+$configTraceLicenseFull = [IO.Path]::GetFullPath($ConfigTraceLicense)
 
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Join-Path $repoRoot 'artifacts\local-release'
@@ -102,6 +119,33 @@ if (
     throw 'Port 5077 is already in use.'
 }
 
+Write-Stage 'CONFIGTRACE INPUT'
+
+if (-not (Test-Path -LiteralPath $configTraceExecutableFull -PathType Leaf)) {
+    throw "Frozen ConfigTrace executable is missing: $configTraceExecutableFull"
+}
+if (-not (Test-Path -LiteralPath $configTraceLicenseFull -PathType Leaf)) {
+    throw "ConfigTrace license is missing: $configTraceLicenseFull"
+}
+
+$configTraceSourceHash = (
+    Get-FileHash -LiteralPath $configTraceExecutableFull -Algorithm SHA256
+).Hash.ToLowerInvariant()
+if ($configTraceSourceHash -ne $expectedConfigTraceSha256) {
+    throw "ConfigTrace executable SHA256 mismatch. Expected $expectedConfigTraceSha256 but got $configTraceSourceHash."
+}
+
+$configTraceLicenseHash = (
+    Get-FileHash -LiteralPath $configTraceLicenseFull -Algorithm SHA256
+).Hash.ToLowerInvariant()
+if ($configTraceLicenseHash -ne $expectedConfigTraceLicenseSha256) {
+    throw "ConfigTrace license SHA256 mismatch. Expected $expectedConfigTraceLicenseSha256 but got $configTraceLicenseHash."
+}
+
+Write-Host "ConfigTrace version: $configTraceVersion"
+Write-Host "ConfigTrace source commit: $configTraceSourceCommit"
+Write-Host "ConfigTrace EXE SHA256: $configTraceSourceHash"
+
 if (Test-Path -LiteralPath $outputFull) {
     Remove-Item -LiteralPath $outputFull -Recurse -Force
 }
@@ -176,6 +220,31 @@ Copy-Item `
     (Join-Path $repoRoot 'THIRD-PARTY-NOTICES.md') `
     (Join-Path $publish 'THIRD-PARTY-NOTICES.md')
 
+Write-Stage 'CONFIGTRACE SIDECAR'
+
+$configTracePublishDir = Join-Path $publish 'providers\ConfigTrace'
+New-Item -ItemType Directory -Path $configTracePublishDir -Force | Out-Null
+
+$configTracePublishedExe = Join-Path $configTracePublishDir 'configtrace.exe'
+$configTracePublishedLicense = Join-Path $configTracePublishDir 'LICENSE.txt'
+
+Copy-Item -LiteralPath $configTraceExecutableFull -Destination $configTracePublishedExe
+Copy-Item -LiteralPath $configTraceLicenseFull -Destination $configTracePublishedLicense
+
+$configTracePublishedHash = (
+    Get-FileHash -LiteralPath $configTracePublishedExe -Algorithm SHA256
+).Hash.ToLowerInvariant()
+if ($configTracePublishedHash -ne $expectedConfigTraceSha256) {
+    throw "Bundled ConfigTrace SHA256 mismatch. Expected $expectedConfigTraceSha256 but got $configTracePublishedHash."
+}
+
+$configTracePublishedLicenseHash = (
+    Get-FileHash -LiteralPath $configTracePublishedLicense -Algorithm SHA256
+).Hash.ToLowerInvariant()
+if ($configTracePublishedLicenseHash -ne $expectedConfigTraceLicenseSha256) {
+    throw "Bundled ConfigTrace license SHA256 mismatch."
+}
+
 @(
     'CrashScope local release candidate'
     "Version: $version"
@@ -183,6 +252,10 @@ Copy-Item `
     "Source ref: $sourceRef"
     "Built UTC: $([DateTime]::UtcNow.ToString('o'))"
     'Target: win-x64 self-contained'
+    "ConfigTrace version: $configTraceVersion"
+    "ConfigTrace source commit: $configTraceSourceCommit"
+    "ConfigTrace executable SHA256: $configTracePublishedHash"
+    'ConfigTrace path: providers\ConfigTrace\configtrace.exe'
     'Validation: local dashboard build + .NET build/test + portable smoke'
 ) | Set-Content `
     -LiteralPath (Join-Path $publish 'BUILD-INFO.txt') `
