@@ -2,7 +2,15 @@
 
 CrashScope 1.2.0 adds a native Windows desktop application shell while preserving the local-first, evidence-first, least-privilege, and low-overhead Agent architecture.
 
-Public publication remains intentionally deferred until the explicit publication checkpoint. No push, tag, GitHub Release, or GitHub Actions run is implied by this local release seal.
+CrashScope 1.2.0 is publicly released at [GitHub Releases](https://github.com/marcelosofficial-ctrl/CrashScope/releases/tag/v1.2.0). The published installer, portable ZIP, and checksum file are the exact artifacts sealed during local release validation.
+
+## Public publication provenance
+
+- Public runtime/tag commit: `8ce9c25dc40f6481bf7b782d3dae67deeb3e6cef`
+- Public documentation/main commit at publication: `097790d6c700fc4fe3e32e080bc0200b08a5bc1f`
+- Exact shared runtime Git tree: `b23d4e4e8f79598362d8d9cc9d1a405e989ee3c6`
+- Public `v1.2.0` remains on the runtime boundary.
+- Publication used direct validated artifact upload; no public GitHub Actions runner jobs were required.
 
 ## Native desktop shell
 
@@ -18,7 +26,7 @@ Public publication remains intentionally deferred until the explicit publication
 
 - CrashScope now uses a recognizable multi-resolution application icon.
 - The Desktop window uses native dark caption integration.
-- Portable packages contain the Desktop payload under `desktop\\`.
+- Portable packages contain the Desktop payload under `desktop\`.
 - Installer shortcuts continue to target `CrashScope.exe` so the Agent lifecycle remains authoritative, while the Desktop executable supplies the shortcut icon.
 - The installer remains per-user and non-admin for normal use.
 
@@ -47,7 +55,7 @@ The strongest real-hardware validation remains the Ryzen 5 7500F / Radeon RX 907
 
 The local 1.2.0 installer is unsigned. Windows SmartScreen reputation warnings may occur. Self-signing would not create public reputation trust, and CrashScope does not instruct users to disable SmartScreen or other Windows security controls.
 
-## Final local artifact seal
+## Final release artifact seal
 
 - Binary release/tag target: `3a6a3ffd9ad40943e7e5fc8be4d8faf0fc7b9912`
 - Portable ZIP SHA-256: `5cd5821800b2e5f2c4ace319a6921267414465129c704b8e50c83b1a1a932b04`
@@ -56,4 +64,4 @@ The local 1.2.0 installer is unsigned. Windows SmartScreen reputation warnings m
 - Published Desktop SHA-256: `c19401015f81ea66d53e9b25e096b3bff3ce7bda5aec7ba740da8ec4fad5974e`
 - Automated .NET tests: **266/266 PASS**
 
-The binary/tag target is intentionally the clean runtime commit used to build these artifacts. A later documentation-only seal commit may record the resulting hashes without changing the binary release boundary.
+The binary release boundary remains the validated private runtime commit above. Public `v1.2.0` points to a privacy-safe public commit with the exact same runtime Git tree; later documentation-only commits do not move the tag or replace the published binaries.

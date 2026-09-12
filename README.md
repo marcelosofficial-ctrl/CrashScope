@@ -34,11 +34,11 @@ CrashScope combines them into evidence-focused incident reports while deliberate
 
 Instead of saying:
 
-> â€œVRAM caused your crash.â€
+> "VRAM caused your crash."
 
 CrashScope is designed to say things like:
 
-> â€œImmediately before the incident, GPU utilization was high, VRAM usage approached its observed peak, and Windows recorded a display-driver/watchdog event.â€
+> "Immediately before the incident, GPU utilization was high, VRAM usage approached its observed peak, and Windows recorded a display-driver/watchdog event."
 
 ## Current capabilities
 
@@ -99,27 +99,29 @@ CrashScope is a modular monolith rather than a collection of services:
 
 ```text
 Hardware / Windows evidence
-          â”‚
-          â–¼
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚ CrashScope Agent (.NET 10) â”‚
-â”‚                            â”‚
-â”‚ central telemetry sampler  â”‚
-â”‚ rolling incident buffer    â”‚
-â”‚ process/session tracking   â”‚
-â”‚ Windows evidence sources   â”‚
-â”‚ incident correlation       â”‚
-â”‚ SQLite persistence         â”‚
-â”‚ localhost REST/WebSocket   â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-              â”‚ loopback only
-              â–¼
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚ React + TypeScript UI      â”‚
-â”‚ live telemetry             â”‚
-â”‚ workload selection         â”‚
-â”‚ sessions + incident detail â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+          |
+          v
++----------------------------+
+| CrashScope Agent (.NET 10) |
+| central telemetry sampler  |
+| rolling incident buffer    |
+| process/session tracking   |
+| Windows evidence sources   |
+| incident correlation       |
+| SQLite persistence         |
+| localhost REST/WebSocket   |
++-------------+--------------+
+              | loopback only
+              v
++----------------------------+
+| React + TypeScript UI      |
+| live telemetry             |
+| workload selection         |
+| sessions + incident detail |
++----------------------------+
+              ^
+              |
+       WPF/WebView2 Desktop
 ```
 
 The dashboard consumes the same telemetry frames already produced by the central sampler. Opening the UI does **not** create another hardware-read loop.
@@ -130,21 +132,28 @@ More detail: [`docs/architecture.md`](docs/architecture.md) and [`docs/adr/`](do
 
 The telemetry architecture is provider-based and intentionally vendor-neutral.
 
-Currently validated on the primary development system:
+Primary development-system validation:
 
+- Windows 11
 - AMD Ryzen 5 7500F
 - AMD Radeon RX 9070 XT
-- Windows 11
 
 AMD GPU telemetry is working end-to-end. Some Ryzen temperature/power/clock readings are not exposed by the current least-privilege sensor path and are represented as unavailable rather than fake zeroes.
 
-NVIDIA, Intel GPU, and Intel CPU validation are part of the public-beta hardware test roadmap. The core contracts are not coupled to LibreHardwareMonitor types.
+Secondary real-machine validation also passed on Windows 10 with an Intel Core i5-3210M and Intel HD Graphics 4000. That secondary pass proves CrashScope installation/runtime compatibility on the Intel machine; it is not used to claim complete modern Intel GPU sensor coverage.
 
-See the maintained [hardware validation matrix](docs/hardware-validation.md) for the distinction between architecture readiness and real-machine validation.
+NVIDIA GeForce remains architecture-ready but not real-hardware validated. Intel Arc / newer Intel GPU telemetry also remains an additional validation target beyond the HD Graphics 4000 secondary machine.
 
-## Windows release candidates
+See the maintained [hardware validation matrix](docs/hardware-validation.md) for the distinction between architecture readiness, compatibility validation, partial telemetry validation, and end-to-end metric validation.
+## Windows release
 
-CrashScope now has locally validated **Windows x64 installer and portable release-candidate pipelines**. Public publication is still intentionally gated; these artifacts are not being presented as a public stable release yet.
+CrashScope **1.2.0 is publicly released for Windows x64** with both an installer and a portable ZIP.
+
+- [Download CrashScope 1.2.0](https://github.com/marcelosofficial-ctrl/CrashScope/releases/tag/v1.2.0)
+- Installer SHA-256: `a37c012293a1c5e5aa94c823f1898a85ef0bc896b5b3cf03d870e8191050a12e`
+- Portable ZIP SHA-256: `5cd5821800b2e5f2c4ace319a6921267414465129c704b8e50c83b1a1a932b04`
+
+The installer is the recommended format for most Windows users.
 
 ### Installer
 
@@ -161,7 +170,7 @@ It:
 - preserves CrashScope user data under `%LOCALAPPDATA%\CrashScope` during repair installs and uninstall
 - includes the same self-contained application payload as the validated portable package
 
-Installer candidates use the versioned filename:
+Published installers use the versioned filename:
 
 ```text
 CrashScope-Setup-<version>.exe
@@ -173,7 +182,7 @@ The portable ZIP remains supported for users who prefer not to install CrashScop
 
 The package is self-contained. End users do not need to install the .NET SDK, .NET runtime, Node.js, or a web server.
 
-Portable candidates use:
+Published portable builds use:
 
 ```text
 CrashScope-v<version>-win-x64.zip
@@ -209,7 +218,7 @@ CrashScope's local release engineering now proves the relevant product and packa
 9. installer lifecycle validation covering install, repair, shortcuts, HKCU registration, data preservation, startup non-interference, and uninstall
 10. state-safe installed-runtime validation covering localhost security, second-instance behavior, workload attach/stop, safe incident capture, restart persistence, and verified restoration of pre-validation user state
 
-The release workflow remains version-aware, and actual merge, version tag, release publication, repository migration, and public visibility are separate approval-gated operations.
+Future releases remain approval-gated. CrashScope 1.2.0 was built and validated locally, then published from the exact validated artifacts without requiring a GitHub-hosted release build.
 
 Unsigned builds can trigger Windows SmartScreen reputation warnings. CrashScope should describe that accurately rather than instructing users to disable Windows security features.
 
@@ -255,7 +264,7 @@ cd "$env:USERPROFILE\source\repos\CrashScope"
 dotnet run --project .\src\CrashScope.Agent\CrashScope.Agent.csproj -c Release
 ```
 
-CrashScope opens its local dashboard automatically after startup. For automation or terminal-only use:
+CrashScope normally prefers the native Windows Desktop shell after startup and retains browser fallback. For automation or terminal-only use:
 
 ```powershell
 dotnet run --project .\src\CrashScope.Agent\CrashScope.Agent.csproj -c Release -- --no-browser
@@ -281,7 +290,6 @@ tests/
   CrashScope.Core.Tests
   CrashScope.Infrastructure.Tests
   CrashScope.Agent.Tests
-  CrashScope.Desktop.Tests
   CrashScope.Desktop.Tests
 
 scripts/
@@ -339,15 +347,15 @@ This distinction is deliberate and central to the project.
 
 ## Roadmap
 
-CrashScope 1.2.0 local release validation is complete. The exact binary release/tag target is the frozen runtime commit `3a6a3ffd9ad40943e7e5fc8be4d8faf0fc7b9912`; the later documentation-only seal commit does not change the binary boundary.
+CrashScope 1.2.0 is publicly released. The public `v1.2.0` tag remains frozen on the privacy-safe runtime commit whose Git tree exactly matches the validated private runtime boundary.
 
 Near-term milestones:
 
-- complete the coordinated v1.0.0 / v1.1.0 GitHub and portfolio publication sweep
-- validate NVIDIA and newer Intel GPU/CPU paths on additional real machines
+- validate NVIDIA hardware and broaden newer Intel GPU/CPU telemetry coverage on additional real machines
 - add richer incident/session comparison views
-- evaluate GapTrace as a future optional process-isolated evidence provider after 1.1
-- optional code signing
+- evaluate GapTrace as a future optional process-isolated evidence provider
+- evaluate trusted code signing for future Windows releases
+- keep future release automation local-first and approval-gated until hosted-runner use is deliberately justified
 
 AI-generated root-cause speculation is intentionally **not** an MVP dependency; structured local evidence comes first.
 ## Contributing

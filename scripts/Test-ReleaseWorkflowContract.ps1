@@ -14,6 +14,8 @@ $content = Get-Content -LiteralPath $workflow -Raw
 
 $required = @(
     'name: Release Windows',
+    'workflow_dispatch:',
+    'Manual-only by design while the private engineering repository has a strict hosted-runner budget.',
     'Publish a GitHub release from the selected v* tag',
     'Validate tag/version identity',
     '$tagVersion -ne $env:CRASHSCOPE_VERSION',
@@ -30,16 +32,20 @@ foreach ($needle in $required) {
     }
 }
 
-$forbidden = @(
-    'name: Release Windows beta',
-    'Create GitHub prerelease',
-    'docs/release-notes-v0.1.0.md'
-)
+if ($content -match '(?m)^  push:\s*$') {
+    throw 'Release workflow must remain manual-only while hosted-runner budget is constrained.'
+}
 
-foreach ($needle in $forbidden) {
-    if ($content.Contains($needle)) {
-        throw "Release workflow still contains legacy beta behavior: $needle"
-    }
+if ($content -match '(?m)^- name:\s') {
+    throw 'Release workflow contains a malformed top-level step.'
+}
+
+if ($content -notmatch '(?m)^      - name: Create GitHub release\s*$') {
+    throw 'Create GitHub release must remain inside jobs.release.steps.'
+}
+
+if ($content.Contains('actions/upload-artifact')) {
+    throw 'Release workflow must not duplicate release packages into Actions artifact storage.'
 }
 
 $conditionalPrerelease =

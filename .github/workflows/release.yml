@@ -1,5 +1,7 @@
 name: Release Windows
 
+# Manual-only by design while the private engineering repository has a strict hosted-runner budget.
+# Official releases remain approval-gated and local-first unless a workflow run is explicitly justified.
 on:
   workflow_dispatch:
     inputs:
@@ -8,11 +10,6 @@ on:
         required: false
         default: false
         type: boolean
-  push:
-    branches:
-      - "release-candidate/**"
-    tags:
-      - "v*"
 
 permissions:
   contents: write
@@ -152,7 +149,7 @@ jobs:
       # Do not duplicate release packages into Actions artifact storage.
       # A published release receives the validated ZIP/checksum directly
       # through the GitHub Release step below.
-- name: Create GitHub release
+      - name: Create GitHub release
         if: github.event_name == 'workflow_dispatch' && inputs.publish_release == true && startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         env:
