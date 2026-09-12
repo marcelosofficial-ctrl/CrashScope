@@ -49,11 +49,11 @@ The local 1.2.0 installer is unsigned. Windows SmartScreen reputation warnings m
 
 ## Final local artifact seal
 
-- Binary release/tag target: `PENDING_RELEASE_COMMIT`
-- Portable ZIP SHA-256: `PENDING_PORTABLE_SHA256`
-- Installer SHA-256: `PENDING_INSTALLER_SHA256`
-- Published Agent SHA-256: `PENDING_AGENT_SHA256`
-- Published Desktop SHA-256: `PENDING_DESKTOP_SHA256`
+- Binary release/tag target: `3a6a3ffd9ad40943e7e5fc8be4d8faf0fc7b9912`
+- Portable ZIP SHA-256: `5cd5821800b2e5f2c4ace319a6921267414465129c704b8e50c83b1a1a932b04`
+- Installer SHA-256: `a37c012293a1c5e5aa94c823f1898a85ef0bc896b5b3cf03d870e8191050a12e`
+- Published Agent SHA-256: `db0deb3234def23a2b4b95e34b841904a189b8625b7ef3f9a5ed6969ee522244`
+- Published Desktop SHA-256: `c19401015f81ea66d53e9b25e096b3bff3ce7bda5aec7ba740da8ec4fad5974e`
 - Automated .NET tests: **266/266 PASS**
 
 The binary/tag target is intentionally the clean runtime commit used to build these artifacts. A later documentation-only seal commit may record the resulting hashes without changing the binary release boundary.

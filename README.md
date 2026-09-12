@@ -339,7 +339,7 @@ This distinction is deliberate and central to the project.
 
 ## Roadmap
 
-CrashScope 1.2.0 final local release sealing is in progress. The exact 1.2 binary release/tag target will be recorded after the clean final artifact build.
+CrashScope 1.2.0 local release validation is complete. The exact binary release/tag target is the frozen runtime commit `3a6a3ffd9ad40943e7e5fc8be4d8faf0fc7b9912`; the later documentation-only seal commit does not change the binary boundary.
 
 Near-term milestones:
 
