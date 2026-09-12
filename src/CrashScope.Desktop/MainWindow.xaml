@@ -1,0 +1,57 @@
+<Window x:Class="CrashScope.Desktop.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="CrashScope"
+        Icon="Assets/CrashScope.ico"
+        Width="1380"
+        Height="900"
+        MinWidth="960"
+        MinHeight="640"
+        WindowStartupLocation="CenterScreen"
+        Background="#090D12">
+    <Grid Background="#090D12">
+        <wv2:WebView2 x:Name="DashboardView"
+                     Visibility="Collapsed" />
+
+        <Grid x:Name="LoadingPanel"
+              Background="#090D12">
+            <Border Width="460"
+                    Padding="32"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Background="#101821"
+                    BorderBrush="#23303D"
+                    BorderThickness="1"
+                    CornerRadius="14">
+                <StackPanel>
+                    <TextBlock Text="CRASHSCOPE"
+                               Foreground="#69E4EA"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               />
+
+                    <TextBlock Text="Opening desktop dashboard"
+                               Margin="0,14,0,0"
+                               Foreground="#EEF5F7"
+                               FontSize="24"
+                               FontWeight="SemiBold" />
+
+                    <TextBlock x:Name="StatusText"
+                               Text="Starting local Agent..."
+                               Margin="0,12,0,0"
+                               Foreground="#9EB0BC"
+                               FontSize="14"
+                               TextWrapping="Wrap" />
+
+                    <Button x:Name="BrowserFallbackButton"
+                            Content="Open browser fallback"
+                            Margin="0,22,0,0"
+                            Height="38"
+                            Visibility="Collapsed"
+                            Click="BrowserFallbackButton_Click" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

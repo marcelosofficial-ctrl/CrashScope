@@ -13,6 +13,36 @@ CrashScope follows semantic versioning for public releases. Early `0.x` releases
 - Evaluation of GapTrace as a future optional external evidence provider.
 - Optional code signing.
 
+## [1.2.0] - 2026-09-12
+
+### Added
+
+- Native WPF + WebView2 desktop shell that renders the existing localhost dashboard inside a normal Windows application window.
+- True Desktop single-instance activation: duplicate UI launches activate the existing window instead of creating another shell.
+- Multi-resolution CrashScope application icon and native dark-window caption integration.
+- Desktop project and Desktop test project in the solution.
+
+### Changed
+
+- Normal launches, tray Open CrashScope, and second-launch behavior now prefer the native desktop shell while retaining browser fallback.
+- The Agent remains the low-overhead always-on component; closing the Desktop shell unloads WebView2 while the Agent continues running.
+- Portable packaging now includes the Desktop shell under `desktop\\` and installer shortcuts retain the Agent launch target while using the Desktop icon.
+- Production packaging carries numeric 1.2.0.0 file/version metadata and closes both Agent and Desktop processes during installer upgrades.
+- Validation-state completion now re-verifies restored product data before deleting its durable vault and safely tolerates repeated completion only after that verification.
+
+### Validation
+
+- **266/266 .NET tests passed**: Core 30, Infrastructure 37, Agent 179, Desktop 20.
+- Native installed-shell validation passed: shortcut launch, dark title bar, embedded dashboard, tray icon, true single-instance behavior, and closing the Desktop window while the Agent remains healthy.
+- Exact production preview upgrade from 1.1.0 passed with user data and unrelated startup state preserved.
+- Production uninstall preserved user data and unrelated startup state while removing the exact owned startup value.
+- Recovery consensus proved the restored live user-data tree predates the 1.2G validation run and exactly matches the separately verified R6 safety snapshot.
+- Final 1.2.0 portable and installer artifact hashes are recorded in the 1.2.0 release notes after the frozen runtime commit is built.
+
+### Known release note
+
+- The local installer remains unsigned; Windows SmartScreen reputation warnings may occur. CrashScope does not instruct users to disable Windows security features.
+
 ## [1.1.0] - 2026-09-12
 
 ### Added

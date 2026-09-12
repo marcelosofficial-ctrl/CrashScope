@@ -10,6 +10,8 @@ $repoRoot = [IO.Path]::GetFullPath(
 
 $issPath = Join-Path $repoRoot 'installer\CrashScope.iss'
 $builderPath = Join-Path $repoRoot 'scripts\Build-LocalInstaller.ps1'
+$releaseBuilderPath = Join-Path $repoRoot 'scripts\Build-LocalReleaseCandidate.ps1'
+$portableTestPath = Join-Path $repoRoot 'scripts\Test-PortableBuild.ps1'
 
 if (-not (Test-Path -LiteralPath $issPath -PathType Leaf)) {
     throw 'installer\CrashScope.iss is missing.'
@@ -21,6 +23,8 @@ if (-not (Test-Path -LiteralPath $builderPath -PathType Leaf)) {
 
 $iss = Get-Content -LiteralPath $issPath -Raw
 $builder = Get-Content -LiteralPath $builderPath -Raw
+$releaseBuilder = Get-Content -LiteralPath $releaseBuilderPath -Raw
+$portableTest = Get-Content -LiteralPath $portableTestPath -Raw
 
 function Assert-Match(
     [string]$Text,
@@ -66,7 +70,7 @@ Assert-Match $iss '(?im)^OutputBaseFilename=CrashScope-Setup-\{#AppVersion\}\s*$
 Assert-Match $iss '(?im)^SetupIconFile=\{#SetupIcon\}\s*$' `
     'CrashScope setup icon contract is missing.'
 
-Assert-Match $iss '(?im)^Name:\s*"\{group\}\\CrashScope";\s*Filename:\s*"\{app\}\\CrashScope\.exe"\s*$' `
+Assert-Match $iss '(?im)^Name:\s*"\{group\}\\CrashScope";.*Filename:\s*"\{app\}\\CrashScope\.exe";.*IconFilename:\s*"\{app\}\\desktop\\CrashScope\.Desktop\.exe"' `
     'Start Menu shortcut is missing.'
 
 Assert-Match $iss '(?im)^Name:\s*"desktopicon".*Flags:\s*unchecked\s*$' `
@@ -113,6 +117,46 @@ Assert-NoMatch $builder '(?im)^\s*git\s+(push|pull|fetch|tag|reset|checkout)\b' 
 
 Assert-NoMatch $builder '(?im)^\s*gh\s+' `
     'installer builder must not invoke GitHub CLI.'
+
+
+Assert-Match $iss '(?im)^VersionInfoVersion=\{#AppFileVersion\}\s*$' `
+    'numeric installer file version is missing.'
+
+Assert-Match $iss '(?im)^UninstallDisplayIcon=\{app\}\\desktop\\CrashScope\.Desktop\.exe\s*$' `
+    'installed product icon must use Desktop shell.'
+
+Assert-Match $iss '(?im)^CloseApplicationsFilter=CrashScope\.exe,CrashScope\.Desktop\.exe\s*$' `
+    'close filter must include Agent and Desktop.'
+
+Assert-Match $iss '(?im)^Name:\s*"\{userdesktop\}\\CrashScope";.*Filename:\s*"\{app\}\\CrashScope\.exe";.*IconFilename:\s*"\{app\}\\desktop\\CrashScope\.Desktop\.exe";.*Tasks:\s*desktopicon' `
+    'Desktop shortcut must use Agent target with Desktop-shell icon.'
+
+Assert-Match $builder 'desktop\\CrashScope\.Desktop\.exe' `
+    'installer builder must require Desktop EXE.'
+
+Assert-Match $builder 'desktop\\CrashScope\.Desktop\.dll' `
+    'installer builder must require Desktop DLL.'
+
+Assert-Match $builder '--define=AppFileVersion=\$fileVersion' `
+    'installer builder must pass numeric file version.'
+
+Assert-Match $releaseBuilder '(?m)^\$desktopProjectPath\s*=' `
+    'release builder Desktop project path missing.'
+
+Assert-Match $releaseBuilder "Write-Stage 'DESKTOP SHELL PUBLISH'" `
+    'release builder Desktop publish stage missing.'
+
+Assert-Match $releaseBuilder ([regex]::Escape("Join-Path `$publish 'desktop'")) `
+    'release builder Desktop subdirectory missing.'
+
+Assert-Match $releaseBuilder '\$runtimeExpectedVersion\s*=' `
+    'release builder runtime-version normalization missing.'
+
+Assert-Match $portableTest 'desktop\\CrashScope\.Desktop\.exe' `
+    'portable smoke must require Desktop EXE.'
+
+Assert-Match $portableTest 'desktop\\CrashScope\.Desktop\.dll' `
+    'portable smoke must require Desktop DLL.'
 
 Write-Host 'INSTALLER CONTRACT PASS'
 Write-Host 'Per-user install: PASS'

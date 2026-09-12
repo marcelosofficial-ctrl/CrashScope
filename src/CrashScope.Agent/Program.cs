@@ -35,9 +35,11 @@ using (var existingInstanceClient = new HttpClient
     {
         Console.WriteLine($"CrashScope is already running at {dashboardUri}");
         if (launchOptions.OpenBrowser
+            && !DesktopShellLauncher.TryOpen()
             && !ExistingCrashScopeInstanceProbe.TryOpenDashboard(dashboardUri))
         {
-            Console.WriteLine("Open the existing CrashScope dashboard in your browser.");
+            Console.WriteLine(
+                "CrashScope could not open the desktop dashboard or browser fallback.");
         }
 
         return;
@@ -482,7 +484,8 @@ if (launchOptions.OpenBrowser)
 {
     app.Lifetime.ApplicationStarted.Register(() =>
     {
-        if (!ExistingCrashScopeInstanceProbe.TryOpenDashboard(dashboardUri))
+        if (!DesktopShellLauncher.TryOpen()
+            && !ExistingCrashScopeInstanceProbe.TryOpenDashboard(dashboardUri))
         {
             Console.WriteLine($"CrashScope is running at {dashboardUri}");
         }

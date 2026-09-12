@@ -101,36 +101,6 @@ jobs:
       - name: Publish self-contained Windows build
         run: dotnet publish src/CrashScope.Agent/CrashScope.Agent.csproj -p:PublishProfile=PortableWinX64 -o artifacts/CrashScope-win-x64
 
-      - name: Acquire validated ConfigTrace provider
-        if: env.CRASHSCOPE_VERSION == '1.1.0'
-        shell: pwsh
-        run: |
-          $expected = 'fe1c470a58402e82e97ee529c6a6b02822430da70e65ffc5fc5a71359ad4e521'
-          $zip = Join-Path $env:RUNNER_TEMP 'ConfigTrace-1.0.1-win-x64.zip'
-          $extract = Join-Path $env:RUNNER_TEMP 'ConfigTrace-1.0.1'
-          Invoke-WebRequest -Uri 'https://github.com/marcelosofficial-ctrl/ConfigTrace/releases/download/v1.0.1/ConfigTrace-1.0.1-win-x64.zip' -OutFile $zip -UseBasicParsing
-          Expand-Archive -LiteralPath $zip -DestinationPath $extract -Force
-
-          $sourceExe = Join-Path $extract 'configtrace.exe'
-          $sourceLicense = Join-Path $extract 'LICENSE'
-          if (-not (Test-Path -LiteralPath $sourceExe -PathType Leaf)) {
-            throw 'ConfigTrace package is missing configtrace.exe.'
-          }
-          if (-not (Test-Path -LiteralPath $sourceLicense -PathType Leaf)) {
-            throw 'ConfigTrace package is missing LICENSE.'
-          }
-
-          $actual = (Get-FileHash -LiteralPath $sourceExe -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($actual -ne $expected) {
-            throw "ConfigTrace SHA256 mismatch. Expected $expected but got $actual."
-          }
-
-          $provider = Join-Path $env:GITHUB_WORKSPACE 'artifacts/CrashScope-win-x64/providers/ConfigTrace'
-          New-Item -ItemType Directory -Path $provider -Force | Out-Null
-          Copy-Item -LiteralPath $sourceExe -Destination (Join-Path $provider 'configtrace.exe') -Force
-          Copy-Item -LiteralPath $sourceLicense -Destination (Join-Path $provider 'LICENSE.txt') -Force
-          Write-Host "Bundled ConfigTrace 1.0.1 SHA256: $actual"
-
       - name: Add release provenance and notices
         shell: pwsh
         run: |

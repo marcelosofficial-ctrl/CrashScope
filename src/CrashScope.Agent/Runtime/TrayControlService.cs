@@ -60,7 +60,8 @@ internal sealed class TrayControlService
     }
 
     public bool OpenDashboard() =>
-        ExistingCrashScopeInstanceProbe.TryOpenDashboard(DashboardUri);
+        DesktopShellLauncher.TryOpen()
+        || ExistingCrashScopeInstanceProbe.TryOpenDashboard(DashboardUri);
 
     public ValueTask<CrashScopeSettings> ToggleAutoAssistAsync(
         CancellationToken cancellationToken = default)

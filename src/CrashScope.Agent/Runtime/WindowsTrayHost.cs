@@ -257,7 +257,7 @@ internal sealed class WindowsTrayHost : IHostedService, IDisposable
         {
             AppendMenuW(menu, MfString | MfGrayed, UIntPtr.Zero, state.StatusText);
             AppendMenuW(menu, MfSeparator, UIntPtr.Zero, null);
-            AppendMenuW(menu, MfString, new UIntPtr(CommandOpen), "Open dashboard");
+            AppendMenuW(menu, MfString, new UIntPtr(CommandOpen), "Open CrashScope");
             AppendMenuW(
                 menu,
                 MfString | (state.AutoAssistEnabled ? MfChecked : 0),

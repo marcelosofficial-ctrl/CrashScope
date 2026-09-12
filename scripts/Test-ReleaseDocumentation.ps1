@@ -61,16 +61,15 @@ $readme = Read-Text 'README.md'
 $changelog = Read-Text 'CHANGELOG.md'
 $notes10 = Read-Text 'docs\release-notes-v1.0.0.md'
 $notes11 = Read-Text 'docs\release-notes-v1.1.0.md'
+$notes12 = Read-Text 'docs\release-notes-v1.2.0.md'
 
-$unreleased = Get-Section $changelog '## [Unreleased]' '## [1.1.0]'
+$unreleased = Get-Section $changelog '## [Unreleased]' '## [1.2.0]'
+$v12 = Get-Section $changelog '## [1.2.0] - 2026-09-12' '## [1.1.0]'
 $v11 = Get-Section $changelog '## [1.1.0] - 2026-09-12' '## [1.0.0]'
 $v10 = Get-Section $changelog '## [1.0.0] - 2026-09-11' '## [0.1.0]'
 
-Assert-Match $readme 'local release validation is complete' `
-    'README must record completed 1.1 local validation.'
-
-Assert-Match $readme 'e51943f6b7aecaf98223ef30cbec10ef94c1eba1' `
-    'README must preserve the exact 1.1 release boundary.'
+Assert-Match $readme 'CrashScope 1\.2\.0 (?:final local release sealing is in progress|local release validation is complete)' `
+    'README must describe the current 1.2 local release boundary.'
 
 Assert-NoMatch $unreleased '(?i)installer validation' `
     'Unreleased must not list the completed installer gate.'
@@ -132,6 +131,36 @@ Assert-Match $notes11 '(?i)publication remains intentionally deferred' `
 Assert-NoMatch ($notes10 + "`n" + $notes11) `
     '(?i)already published|public release is live|GitHub Release is live' `
     'Release notes must not overclaim publication.'
+
+Assert-Match $readme 'v1\.2\.0 release notes' `
+    'README must link the 1.2 release notes.'
+
+Assert-Match $readme '266 automated \.NET tests' `
+    'README must record the 1.2 automated-test count.'
+
+Assert-Match $v12 '266/266 \.NET tests passed' `
+    '1.2 changelog must record the 266/266 test boundary.'
+
+Assert-Match $v12 '(?i)native WPF \+ WebView2 desktop shell' `
+    '1.2 changelog must record the native desktop shell.'
+
+Assert-Match $v12 '(?i)unsigned' `
+    '1.2 changelog must preserve unsigned-installer truth.'
+
+Assert-Match $notes12 '(?i)native Windows desktop application shell' `
+    '1.2 release notes must describe the desktop-shell release.'
+
+Assert-Match $notes12 '266/266 PASS' `
+    '1.2 release notes must preserve the automated-test boundary.'
+
+Assert-Match $notes12 '(?i)publication remains intentionally deferred' `
+    '1.2 release notes must preserve publication truth.'
+
+Assert-Match $notes12 '(?i)NVIDIA real-hardware validation remains outstanding' `
+    '1.2 release notes must not overclaim NVIDIA validation.'
+
+Assert-NoMatch $notes12 '(?i)already published|public release is live|GitHub Release is live' `
+    '1.2 release notes must not overclaim publication.'
 
 Write-Host 'RELEASE DOCUMENTATION CONTRACT PASS'
 Write-Host 'Completed-vs-future boundary: PASS'

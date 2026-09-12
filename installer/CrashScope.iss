@@ -10,6 +10,10 @@
   #error SetupIcon must be supplied by the build script
 #endif
 
+#ifndef AppFileVersion
+  #error AppFileVersion must be supplied by the build script
+#endif
+
 #define AppName "CrashScope"
 #define AppExe "CrashScope.exe"
 
@@ -28,17 +32,17 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputBaseFilename=CrashScope-Setup-{#AppVersion}
 SetupIconFile={#SetupIcon}
-UninstallDisplayIcon={app}\CrashScope.exe
+UninstallDisplayIcon={app}\desktop\CrashScope.Desktop.exe
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern dynamic
 CloseApplications=yes
-CloseApplicationsFilter=CrashScope.exe
+CloseApplicationsFilter=CrashScope.exe,CrashScope.Desktop.exe
 RestartApplications=no
 RestartIfNeededByRun=no
 SignedUninstaller=no
 ChangesEnvironment=no
-VersionInfoVersion={#AppVersion}.0
+VersionInfoVersion={#AppFileVersion}
 VersionInfoProductName=CrashScope
 VersionInfoDescription=CrashScope Setup
 VersionInfoCompany=CrashScope
@@ -50,11 +54,11 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\CrashScope"; Filename: "{app}\CrashScope.exe"
-Name: "{userdesktop}\CrashScope"; Filename: "{app}\CrashScope.exe"; Tasks: desktopicon
+Name: "{group}\CrashScope"; Filename: "{app}\CrashScope.exe"; WorkingDir: "{app}"; IconFilename: "{app}\desktop\CrashScope.Desktop.exe"
+Name: "{userdesktop}\CrashScope"; Filename: "{app}\CrashScope.exe"; WorkingDir: "{app}"; IconFilename: "{app}\desktop\CrashScope.Desktop.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\CrashScope.exe"; Description: "Launch CrashScope"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\CrashScope.exe"; WorkingDir: "{app}"; Description: "Launch CrashScope"; Flags: nowait postinstall skipifsilent
 
 ; CrashScopeStartupCleanup
 [Code]

@@ -137,6 +137,7 @@ function Protect-CrashScopeValidationState {
         RunId = $runId
         VaultRoot = $vaultRoot
         BackupDataRoot = $backupDataRoot
+        ProductDataRoot = [IO.Path]::GetFullPath($ProductDataRoot)
         HadProductData = [bool]$hadProductData
         DataManifest = @($manifest)
         StartupSnapshot = $StartupSnapshot
@@ -189,12 +190,43 @@ function Restore-CrashScopeValidationState {
 function Complete-CrashScopeValidationState {
     param([Parameter(Mandatory = $true)]$Context)
 
+    $productDataProperty = $Context.PSObject.Properties["ProductDataRoot"]
+
+    if ($null -eq $productDataProperty -or [string]::IsNullOrWhiteSpace([string]$productDataProperty.Value)) {
+        throw "CrashScope validation context does not contain ProductDataRoot. Refusing vault completion."
+    }
+
+    $productDataRoot = [IO.Path]::GetFullPath([string]$productDataProperty.Value)
+
+    if ([bool]$Context.HadProductData) {
+        if (-not (Test-Path -LiteralPath $productDataRoot -PathType Container)) {
+            throw "Original CrashScope product data is not present at '$productDataRoot'. Refusing vault completion."
+        }
+
+        $restoredManifest = @(Get-CrashScopeValidationDirectoryManifest -Root $productDataRoot)
+        Assert-CrashScopeValidationManifestMatch -Expected $Context.DataManifest -Actual $restoredManifest -Label 'Vault-completion restored CrashScope state'
+    }
+    elseif (Test-Path -LiteralPath $productDataRoot) {
+        throw "CrashScope product data exists even though the original state was empty. Refusing vault completion."
+    }
+
     if (-not (Test-Path -LiteralPath $Context.VaultRoot -PathType Container)) {
-        throw "CrashScope validation vault '$($Context.VaultRoot)' disappeared before completion."
+        return [PSCustomObject]@{
+            RestoredStateVerified = $true
+            VaultRemoved = $true
+            AlreadyCompleted = $true
+        }
     }
 
     Remove-Item -LiteralPath $Context.VaultRoot -Recurse -Force -ErrorAction Stop
+
     if (Test-Path -LiteralPath $Context.VaultRoot) {
         throw "CrashScope validation vault '$($Context.VaultRoot)' could not be removed after verified restoration."
+    }
+
+    return [PSCustomObject]@{
+        RestoredStateVerified = $true
+        VaultRemoved = $true
+        AlreadyCompleted = $false
     }
 }

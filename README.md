@@ -15,6 +15,7 @@ It is designed for gamers, PC enthusiasts, overclockers/undervolters, hardware t
 - [Hardware validation matrix](docs/hardware-validation.md)
 - [Public beta validation checklist](docs/beta-validation-checklist.md)
 - [One-command portable validation](docs/local-release-validation.md)
+- [v1.2.0 release notes](docs/release-notes-v1.2.0.md)
 - [v1.1.0 release notes](docs/release-notes-v1.1.0.md)
 - [v1.0.0 release notes](docs/release-notes-v1.0.0.md)
 - [v0.1.0 release notes](docs/release-notes-v0.1.0.md)
@@ -61,7 +62,10 @@ CrashScope is designed to say things like:
 - User-selected ConfigTrace root with workload-scoped sidecar lifecycle and bounded Context evidence correlation
 - Safe user diagnostic markers that can include nearby provider Context evidence without changing marker classification
 - Second-instance detection that reuses an already-running healthy CrashScope instance
-- Normal portable launch opens the dashboard automatically; `--no-browser` supports automation/CI
+- Native Windows desktop shell (WPF + WebView2) renders the existing local dashboard inside CrashScope
+- The lightweight Agent remains the always-on process; the Desktop/WebView2 process exists only while the UI window is open
+- Desktop shell uses true single-instance activation, a native dark title bar, and the CrashScope application icon
+- Normal launch prefers the native desktop shell; browser launch remains a fallback and `--no-browser` supports automation/CI
 - Localhost browser-origin protection against unrelated websites attempting API/WebSocket access
 - Browser hardening headers and `no-store` caching for local diagnostic data/UI responses
 - Localhost-only API/dashboard; no account, cloud backend, analytics, or automatic telemetry upload
@@ -242,7 +246,7 @@ dotnet build CrashScope.sln -c Release
 dotnet test CrashScope.sln -c Release --no-build
 ```
 
-CrashScope 1.1 currently contains **239 automated .NET tests** across Core, Infrastructure, and Agent projects.
+CrashScope 1.2 contains **266 automated .NET tests** across Core, Infrastructure, Agent, and Desktop projects.
 
 ### Run
 
@@ -270,12 +274,15 @@ src/
   CrashScope.Core              domain contracts and models
   CrashScope.Infrastructure    Windows, hardware and SQLite adapters
   CrashScope.Agent             runtime, API, sampling and incident pipeline
+  CrashScope.Desktop           native WPF/WebView2 application shell
   CrashScope.Dashboard         React/TypeScript/Vite frontend
 
 tests/
   CrashScope.Core.Tests
   CrashScope.Infrastructure.Tests
   CrashScope.Agent.Tests
+  CrashScope.Desktop.Tests
+  CrashScope.Desktop.Tests
 
 scripts/
   Validate-PortableCandidate.ps1
@@ -332,7 +339,7 @@ This distinction is deliberate and central to the project.
 
 ## Roadmap
 
-CrashScope 1.1 local release validation is complete. The exact release runtime is frozen at the fully validated `e51943f6b7aecaf98223ef30cbec10ef94c1eba1` boundary.
+CrashScope 1.2.0 final local release sealing is in progress. The exact 1.2 binary release/tag target will be recorded after the clean final artifact build.
 
 Near-term milestones:
 

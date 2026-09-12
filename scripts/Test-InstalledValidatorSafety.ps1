@@ -103,3 +103,67 @@ Write-Host "Startup restoration: PASS"
 Write-Host "Installed runtime gates: PASS"
 Write-Host "Official uninstall cleanup: PASS"
 Write-Host "Remote Git operations: NONE"
+
+# Runtime proof for durable validation-state preservation/completion.
+$runtimeSafetyHelpers = Join-Path $repoRoot "scripts\ValidationStateSafety.ps1"
+. $runtimeSafetyHelpers
+
+$runtimeRoot = Join-Path $env:TEMP ("CrashScope-state-safety-proof-{0}" -f ([Guid]::NewGuid().ToString("N")))
+$runtimeProduct = Join-Path $runtimeRoot "product"
+$runtimeVaultBase = Join-Path $runtimeRoot "vaults"
+$runtimeQuarantine = Join-Path $runtimeRoot "validation-quarantine"
+
+try {
+    New-Item -ItemType Directory -Path (Join-Path $runtimeProduct "nested") -Force | Out-Null
+    [IO.File]::WriteAllText((Join-Path $runtimeProduct "nested\original.txt"),"original-state",[Text.Encoding]::UTF8)
+    [IO.File]::WriteAllBytes((Join-Path $runtimeProduct "crashscope.db"),[byte[]](1..64))
+
+    $runtimeOriginalManifest = @(Get-CrashScopeValidationDirectoryManifest -Root $runtimeProduct)
+    $runtimeStartup = [PSCustomObject]@{ Exists = $false; Value = $null; Kind = $null }
+
+    $runtimeContext = Protect-CrashScopeValidationState -ProductDataRoot $runtimeProduct -StartupSnapshot $runtimeStartup -VaultBase $runtimeVaultBase
+
+    if ($null -eq $runtimeContext.PSObject.Properties["ProductDataRoot"]) {
+        throw "Runtime proof: ProductDataRoot was not preserved in context."
+    }
+
+    if (Test-Path -LiteralPath $runtimeProduct) {
+        throw "Runtime proof: protected product state remained in place."
+    }
+
+    New-Item -ItemType Directory -Path $runtimeProduct -Force | Out-Null
+    [IO.File]::WriteAllText((Join-Path $runtimeProduct "validation.txt"),"validation-state",[Text.Encoding]::UTF8)
+
+    $runtimeRestore = Restore-CrashScopeValidationState -Context $runtimeContext -ProductDataRoot $runtimeProduct -QuarantineRoot $runtimeQuarantine
+
+    if (-not [bool]$runtimeRestore.DataRestoredAndVerified) {
+        throw "Runtime proof: restore did not report verified success."
+    }
+
+    $runtimeRestoredManifest = @(Get-CrashScopeValidationDirectoryManifest -Root $runtimeProduct)
+    Assert-CrashScopeValidationManifestMatch -Expected $runtimeOriginalManifest -Actual $runtimeRestoredManifest -Label "Runtime proof restored state"
+
+    $runtimeCompletion = Complete-CrashScopeValidationState -Context $runtimeContext
+
+    if (-not [bool]$runtimeCompletion.RestoredStateVerified -or [bool]$runtimeCompletion.AlreadyCompleted) {
+        throw "Runtime proof: first completion result was invalid."
+    }
+
+    $runtimeRepeatCompletion = Complete-CrashScopeValidationState -Context $runtimeContext
+
+    if (-not [bool]$runtimeRepeatCompletion.RestoredStateVerified -or -not [bool]$runtimeRepeatCompletion.AlreadyCompleted) {
+        throw "Runtime proof: repeated completion was not safely idempotent."
+    }
+
+    $runtimeFinalManifest = @(Get-CrashScopeValidationDirectoryManifest -Root $runtimeProduct)
+    Assert-CrashScopeValidationManifestMatch -Expected $runtimeOriginalManifest -Actual $runtimeFinalManifest -Label "Runtime proof final state"
+
+    Write-Host "VALIDATION STATE RUNTIME PROOF PASS"
+    Write-Host "Completion verifies restored state before vault deletion: PASS"
+    Write-Host "Repeated completion after verified restore: PASS"
+}
+finally {
+    if (Test-Path -LiteralPath $runtimeRoot) {
+        Remove-Item -LiteralPath $runtimeRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}

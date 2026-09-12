@@ -62,6 +62,17 @@ if (
 
 $version = $versionNode.InnerText.Trim()
 
+$fileVersionNode = $project.SelectSingleNode('//FileVersion')
+
+if (
+    $null -eq $fileVersionNode -or
+    [string]::IsNullOrWhiteSpace($fileVersionNode.InnerText)
+) {
+    throw 'CrashScope.Agent.csproj does not define FileVersion.'
+}
+
+$fileVersion = $fileVersionNode.InnerText.Trim()
+
 $artifactsRoot = [IO.Path]::GetFullPath(
     (Join-Path $repoRoot 'artifacts')
 )
@@ -99,6 +110,8 @@ if (
 
 $requiredProductFiles = @(
     'CrashScope.exe',
+    'desktop\CrashScope.Desktop.exe',
+    'desktop\CrashScope.Desktop.dll',
     'wwwroot\index.html',
     'LICENSE.txt',
     'THIRD-PARTY-NOTICES.md',
@@ -199,6 +212,10 @@ if (Get-Process -Name 'CrashScope' -ErrorAction SilentlyContinue) {
     throw 'CrashScope must be stopped before installer packaging.'
 }
 
+if (Get-Process -Name 'CrashScope.Desktop' -ErrorAction SilentlyContinue) {
+    throw 'CrashScope Desktop must be stopped before installer packaging.'
+}
+
 $listeners = @(
     Get-NetTCPConnection `
         -LocalPort 5077 `
@@ -226,6 +243,7 @@ Write-Stage 'INNO SETUP COMPILE'
 
 $isccArgs = @(
     "--define=AppVersion=$version",
+    "--define=AppFileVersion=$fileVersion",
     "--define=SourceDir=$sourceFull",
     "--define=SetupIcon=$iconPath",
     "--output-dir=$outputFull",

@@ -55,6 +55,7 @@ if ($dirty.Count -gt 0) {
 }
 
 $projectPath = Join-Path $repoRoot 'src\CrashScope.Agent\CrashScope.Agent.csproj'
+$desktopProjectPath = Join-Path $repoRoot 'src\CrashScope.Desktop\CrashScope.Desktop.csproj'
 
 [xml]$project = Get-Content -LiteralPath $projectPath -Raw
 
@@ -68,6 +69,7 @@ if (
 }
 
 $version = $versionNode.InnerText.Trim()
+$runtimeExpectedVersion = ($version -split '-', 2)[0]
 
 $head = (git rev-parse HEAD).Trim()
 
@@ -117,6 +119,10 @@ if (
         -ErrorAction SilentlyContinue).Count -gt 0
 ) {
     throw 'Port 5077 is already in use.'
+}
+
+if (@(Get-Process CrashScope.Desktop -ErrorAction SilentlyContinue).Count -gt 0) {
+    throw 'CrashScope Desktop is currently running. Exit it before release packaging.'
 }
 
 Write-Stage 'CONFIGTRACE INPUT'
@@ -212,6 +218,29 @@ if ($LASTEXITCODE -ne 0) {
     throw 'Self-contained win-x64 publish failed.'
 }
 
+Write-Stage 'DESKTOP SHELL PUBLISH'
+
+$desktopPublish = Join-Path $publish 'desktop'
+
+dotnet publish `
+    $desktopProjectPath `
+    -c Release `
+    -r win-x64 `
+    --self-contained true `
+    -o $desktopPublish
+
+if ($LASTEXITCODE -ne 0) {
+    throw 'CrashScope Desktop self-contained win-x64 publish failed.'
+}
+
+if (
+    -not (Test-Path `
+        -LiteralPath (Join-Path $desktopPublish 'CrashScope.Desktop.exe') `
+        -PathType Leaf)
+) {
+    throw 'Desktop publish is missing CrashScope.Desktop.exe.'
+}
+
 Copy-Item `
     (Join-Path $repoRoot 'LICENSE') `
     (Join-Path $publish 'LICENSE.txt')
@@ -251,7 +280,7 @@ if ($configTracePublishedLicenseHash -ne $expectedConfigTraceLicenseSha256) {
     "Source commit: $head"
     "Source ref: $sourceRef"
     "Built UTC: $([DateTime]::UtcNow.ToString('o'))"
-    'Target: win-x64 self-contained'
+    'Target: win-x64 Agent root + self-contained Desktop subdirectory'
     "ConfigTrace version: $configTraceVersion"
     "ConfigTrace source commit: $configTraceSourceCommit"
     "ConfigTrace executable SHA256: $configTracePublishedHash"
@@ -268,7 +297,7 @@ powershell.exe `
     -ExecutionPolicy Bypass `
     -File (Join-Path $repoRoot 'scripts\Test-PortableBuild.ps1') `
     -PublishDirectory $publish `
-    -ExpectedVersion $version `
+    -ExpectedVersion $runtimeExpectedVersion `
     -RequireBuildInfo
 
 if ($LASTEXITCODE -ne 0) {

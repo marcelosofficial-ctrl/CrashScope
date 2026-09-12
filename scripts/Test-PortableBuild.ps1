@@ -26,6 +26,8 @@ $configTraceExe = Join-Path $resolvedPublish "providers\ConfigTrace\configtrace.
 $configTraceLicense = Join-Path $resolvedPublish "providers\ConfigTrace\LICENSE.txt"
 $required = @(
     $exe,
+    (Join-Path $resolvedPublish "desktop\CrashScope.Desktop.exe"),
+    (Join-Path $resolvedPublish "desktop\CrashScope.Desktop.dll"),
     (Join-Path $resolvedPublish "wwwroot\index.html"),
     (Join-Path $resolvedPublish "LICENSE.txt"),
     (Join-Path $resolvedPublish "THIRD-PARTY-NOTICES.md"),
