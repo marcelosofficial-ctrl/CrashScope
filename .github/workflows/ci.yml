@@ -145,22 +145,6 @@ jobs:
             -ExpectedVersion $env:CRASHSCOPE_VERSION `
             -RequireBuildInfo
 
-      - name: Package tested CI build
-        shell: pwsh
-        run: |
-          $publish = Join-Path $env:GITHUB_WORKSPACE 'artifacts/CrashScope-win-x64'
-          $zip = Join-Path $env:GITHUB_WORKSPACE 'artifacts/CrashScope-ci-win-x64.zip'
-          Compress-Archive -Path (Join-Path $publish '*') -DestinationPath $zip -CompressionLevel Optimal
-          $hash = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  CrashScope-ci-win-x64.zip" | Set-Content -Path "$zip.sha256.txt" -Encoding ascii
-          Write-Host "CI package SHA256: $hash"
-
-      - name: Upload exact tested Windows build
-        uses: actions/upload-artifact@v6
-        with:
-          name: CrashScope-ci-win-x64
-          path: |
-            artifacts/CrashScope-ci-win-x64.zip
-            artifacts/CrashScope-ci-win-x64.zip.sha256.txt
-          if-no-files-found: error
-          retention-days: 14
+      # The portable build is smoke-tested above but is intentionally not
+      # retained as a GitHub Actions artifact. Final distributable builds
+      # belong in GitHub Releases, avoiding duplicate Actions storage.
