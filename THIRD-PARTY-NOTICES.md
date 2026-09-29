@@ -87,6 +87,20 @@ CrashScope 1.1 bundles the standalone ConfigTrace executable as an optional, pro
 - Frozen Windows executable SHA-256: `fe1c470a58402e82e97ee529c6a6b02822430da70e65ffc5fc5a71359ad4e521`
 
 CrashScope launches ConfigTrace only when the user has opted in, configured an existing root directory, and a workload is being monitored. ConfigTrace reads source configuration files without modifying them, redacts sensitive-looking structured values, and emits nearby configuration changes as correlation evidence. CrashScope treats those changes as **Context** evidence; proximity does not establish causation.
+
+## Release tooling
+
+### Inno Setup
+
+CrashScope's Windows installer is built with Inno Setup, an open-source Windows installation builder.
+
+- Project: https://jrsoftware.org/isinfo.php
+- Source: https://github.com/jrsoftware/issrc
+- License: https://jrsoftware.org/files/is/license.txt
+- The Inno Setup license permits use for any purpose, including commercial applications, and permits modification/redistribution subject to its stated conditions.
+- Inno Setup-generated installer/runtime code is upstream tooling, not CrashScope-owned source, and is not represented as CrashScope-authored code.
+
+
 ## CrashScope license
 
 CrashScope itself is distributed under the MIT License. See [`LICENSE`](LICENSE).
