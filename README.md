@@ -8,6 +8,14 @@ CrashScope correlates low-overhead CPU/GPU/RAM telemetry with Windows diagnostic
 
 It is designed for gamers, PC enthusiasts, overclockers/undervolters, hardware testers, local-AI users, and anyone debugging an unstable Windows system.
 
+## Project status
+
+- **Public stable:** CrashScope **1.2.0** for Windows x64
+- **Development:** CrashScope **1.3** continues as local/private development and is **not** a public release
+- 1.3 should not be treated as signed, SmartScreen-cleared, or downloadable until its separate release gates are completed
+
+[Download CrashScope 1.2.0](https://github.com/marcelosofficial-ctrl/CrashScope/releases/tag/v1.2.0) · [Portfolio case study](https://marcelosofficial-ctrl.github.io/portfolio/projects/crashscope/)
+
 ## Quick links
 
 - [Architecture](docs/architecture.md)
