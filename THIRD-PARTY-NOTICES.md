@@ -80,6 +80,8 @@ CrashScope 1.1 bundles the standalone ConfigTrace executable as an optional, pro
 
 - Component: ConfigTrace
 - Version: 1.0.1
+- Public source: https://github.com/marcelosofficial-ctrl/ConfigTrace
+- Public release: https://github.com/marcelosofficial-ctrl/ConfigTrace/releases/tag/v1.0.1
 - License: MIT
 - Copyright: Copyright (c) 2026 Marcelo
 - Bundled license: `providers/ConfigTrace/LICENSE.txt`
