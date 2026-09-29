@@ -16,6 +16,24 @@ In the terminology used by the SignPath Foundation requirements:
 
 User-requested actions, such as opening an external link, downloading software through a browser, or deliberately sharing a generated support bundle, are outside that automatic local-processing boundary.
 
+
+## Microsoft WebView2 and Windows diagnostics
+
+CrashScope's native desktop shell uses Microsoft Edge WebView2 to display the local CrashScope dashboard.
+
+CrashScope does not use WebView2 as a CrashScope cloud telemetry channel, and CrashScope does not automatically upload its incident database, support bundles, crash evidence, or application telemetry to the CrashScope developer.
+
+However, **WebView2 itself is a Microsoft component** and may collect required or optional diagnostic data under Microsoft Edge/Windows diagnostic-data practices. Microsoft documents that WebView2 diagnostic data can include WebView2/API usage, creation failures, browser diagnostic events, and data required to maintain performance and reliability. These controls are governed by Windows diagnostic/privacy settings where applicable.
+
+CrashScope does not disable Microsoft Defender SmartScreen in WebView2. Microsoft documents that SmartScreen may collect and send information to Microsoft under the Microsoft Privacy Statement.
+
+Microsoft documentation:
+- WebView2 data and privacy: https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/data-privacy
+- Microsoft Privacy Statement: https://www.microsoft.com/en-us/privacy/privacystatement
+
+CrashScope's embedded WebView2 navigation is restricted to its local dashboard. Navigation outside the allowed local origin is handed to the user's normal external browser rather than being loaded inside CrashScope's embedded dashboard.
+
+
 ## Local interfaces
 
 CrashScope's application API and dashboard are intended to be served on the local machine through loopback/localhost interfaces rather than exposed as a public network service.
