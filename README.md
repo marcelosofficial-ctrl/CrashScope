@@ -22,6 +22,8 @@ It is designed for gamers, PC enthusiasts, overclockers/undervolters, hardware t
 - [Changelog](CHANGELOG.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
+- [Code signing policy](docs/code-signing-policy.md)
+- [Privacy policy](docs/privacy-policy.md)
 - [Threat model](docs/threat-model.md)
 - [Third-party notices](THIRD-PARTY-NOTICES.md)
 - [Portfolio summary](docs/portfolio-summary.md)
