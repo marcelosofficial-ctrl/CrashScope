@@ -46,6 +46,8 @@ CrashScope's Windows portable package includes the .NET runtime components requi
 - License: permissive BSD-style license included with the NuGet package
 - License text: https://www.nuget.org/packages/Microsoft.Web.WebView2/1.0.4191.47/License
 - CrashScope uses WebView2 to host its local React dashboard inside the native WPF Desktop shell.
+- WebView2 data and privacy: https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/data-privacy
+- Microsoft Privacy Statement: https://www.microsoft.com/en-us/privacy/privacystatement
 - WebView2/Microsoft binaries are upstream components and are not to be signed as CrashScope-owned binaries with the CrashScope SignPath Foundation signing policy.
 
 ## Dashboard dependencies
