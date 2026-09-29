@@ -51,9 +51,11 @@ The installed-validator safety test includes a synthetic runtime proof covering 
 
 The strongest real-hardware validation remains the Ryzen 5 7500F / Radeon RX 9070 XT Windows 11 development system plus the existing Windows 10 / Intel Core i5-3210M / Intel HD Graphics 4000 second-PC validation. NVIDIA real-hardware validation remains outstanding and is not claimed.
 
-## Signing
+## Code signing policy
 
-The local 1.2.0 installer is unsigned. Windows SmartScreen reputation warnings may occur. Self-signing would not create public reputation trust, and CrashScope does not instruct users to disable SmartScreen or other Windows security controls.
+CrashScope 1.2.0 is unsigned. Windows SmartScreen reputation warnings may occur. Self-signing would not create public reputation trust, and CrashScope does not instruct users to disable SmartScreen or other Windows security controls.
+
+See the project [Code signing policy](code-signing-policy.md) for the approval-gated plan for future public Windows signing.
 
 ## Final release artifact seal
 
